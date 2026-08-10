@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="WAF Security Console - Enterprise Web Application Firewall Dashboard">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  <title>WAF Security Console</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    @keyframes spin {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-text">WAF Console</div>
+        <div class="brand-sub">Production Environment</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <a href="#dashboardWrap" class="nav-item active" title="Dashboard Overview"><svg class="nav-icon"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9"></rect>
+          <rect x="14" y="3" width="7" height="5"></rect>
+          <rect x="14" y="12" width="7" height="9"></rect>
+          <rect x="3" y="16" width="7" height="5"></rect>
+        </svg><span class="nav-label">Dashboard Overview</span></a>
+      <a href="#botAnalytics" class="nav-item" title="Bot Analytics"><svg class="nav-icon"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+          <circle cx="12" cy="5" r="2"></circle>
+          <path d="M12 7v4"></path>
+          <line x1="8" y1="16" x2="8" y2="16"></line>
+          <line x1="16" y1="16" x2="16" y2="16"></line>
+        </svg><span class="nav-label">Bot Analytics</span></a>
+      <a href="#geoSection" class="nav-item" title="Geolocation Map"><svg class="nav-icon"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg><span class="nav-label">Geolocation Map</span></a>
+      <a href="#threatActorsPanel" class="nav-item" title="Threat Intelligence"><svg class="nav-icon"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12h4l2-9 5 18 3-10h6"></path>
+        </svg><span class="nav-label">Threat Intelligence</span></a>
+      <a href="#eventsContainerWrap" class="nav-item" title="ModSecurity Events"><svg class="nav-icon"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg><span class="nav-label">ModSecurity Events</span></a>
+      <a href="#accessPanel" class="nav-item" title="Access Logs"><svg class="nav-icon"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg><span class="nav-label">Access Logs</span></a>
+      <a href="#errorPanel" class="nav-item" title="Error Logs"><svg class="nav-icon" xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg><span class="nav-label">Error Logs</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+        </svg>
+      </button>
+      <a href="?logout=1" class="logout-btn" title="Logout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span class="nav-label">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Wrapper -->
+  <main class="main-wrapper">
+
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="header-title">
+        <h1>
+          <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle Menu" title="Toggle Menu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Combined Threat Report
+        </h1>
+        <p id="lastUpdate">Waiting for data...</p>
+      </div>
+      <div class="header-actions">
+        <div class="status-pill" id="healthPill">
+          <span class="ind"></span>
+          <span id="healthText">Checking...</span>
+        </div>
+        <button class="btn" id="refreshBtn" onclick="manualRefresh()" title="Refresh now (R)">
+          Refresh <span id="refreshLabel"></span>
+        </button>
+        <button class="btn" id="autoBtn" onclick="toggleAuto()">Pause</button>
+        <button class="btn" onclick="openDrawer()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+          Filters
+        </button>
+        <button class="btn" onclick="openRuleModal()">Manage Rules</button>
+        <button class="btn primary" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </header>
+
+    <!-- Content Padding -->
+    <div class="content-pad" id="dashboardWrap">
+      <div class="error-banner" id="errorBanner"></div>
+
+      <!-- Threat Index Header -->
+      <div class="panel" style="margin-bottom: 24px; display: flex; gap: 32px; align-items: center; padding: 24px;">
+
+        <!-- SVG Gauge -->
+        <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0;">
+          <svg viewBox="0 0 120 120" style="transform: rotate(-90deg); width: 100%; height: 100%;">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--panel-2)" stroke-width="8" />
+            <circle class="gauge-fill" cx="60" cy="60" r="54" fill="none" stroke="var(--gauge-color, var(--ok))"
+              stroke-width="8" stroke-dasharray="339.292" stroke-dashoffset="339.292" stroke-linecap="round"
+              style="transition: stroke-dashoffset 1s ease-out, stroke 0.5s ease;" />
+          </svg>
+          <div
+            style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div id="threatScore" style="font-size: 36px; font-weight: 700; color: var(--text); line-height: 1;">0</div>
+            <div id="threatLevel"
+              style="font-size: 11px; font-weight: 600; text-transform: uppercase; margin-top: 4px;">LOW</div>
+          </div>
+        </div>
+
+        <!-- Breakdown and Details -->
+        <div style="flex: 1;" id="threatComponentContainer">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 12px;">
+            <div>
+              <h2
+                style="margin:0 0 4px 0; color:var(--text); font-size:18px; display:flex; align-items:center; gap:6px;">
+                Real-time Threat Index
+                <span style="cursor:help; color:var(--muted); display:inline-flex;"
+                  title="The Threat Index (0-100) is a real-time risk score calculated based on four factors: Attack Volume, Rule Severity, Network Spread, and Velocity.">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </span>
+              </h2>
+              <div style="color:var(--muted); font-size: 13px;">Safety Score: <span id="safetyScore"
+                  style="color:var(--text);font-weight:600;">100</span>/100</div>
+            </div>
+            <div style="text-align: right;">
+              <div id="threatTrend" style="font-size: 13px; font-weight: 600;">&mdash; 0%</div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 16px; margin-bottom: 8px;">
+            <!-- Volume -->
+            <div style="flex:1;">
+              <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                <span style="color:var(--muted); text-transform:uppercase; display:flex; align-items:center; gap:4px;">
+                  Volume
+                  <span style="cursor:help; display:inline-flex;"
+                    title="Measures raw intensity of traffic compared to historical baseline."><svg
+                      xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg></span>
+                </span>
+                <span style="color:var(--text);"><span id="valVolume">0</span>/25</span>
+              </div>
+              <div style="height:4px; background:var(--panel-2); border-radius:2px; overflow:hidden;">
+                <div id="barVolume"
+                  style="height:100%; width:0%; background:var(--gauge-color, var(--accent)); transition:width 0.5s;">
+                </div>
+              </div>
+            </div>
+            <!-- Severity -->
+            <div style="flex:1;">
+              <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                <span style="color:var(--muted); text-transform:uppercase; display:flex; align-items:center; gap:4px;">
+                  Severity
+                  <span style="cursor:help; display:inline-flex;"
+                    title="Measures the impact of the attack based on triggered rule severity."><svg
+                      xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg></span>
+                </span>
+                <span style="color:var(--text);"><span id="valSeverity">0</span>/25</span>
+              </div>
+              <div style="height:4px; background:var(--panel-2); border-radius:2px; overflow:hidden;">
+                <div id="barSeverity"
+                  style="height:100%; width:0%; background:var(--gauge-color, var(--accent)); transition:width 0.5s;">
+                </div>
+              </div>
+            </div>
+            <!-- Spread -->
+            <div style="flex:1;">
+              <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                <span style="color:var(--muted); text-transform:uppercase; display:flex; align-items:center; gap:4px;">
+                  Spread
+                  <span style="cursor:help; display:inline-flex;"
+                    title="Measures distribution and complexity of the attack across IPs and subnets."><svg
+                      xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg></span>
+                </span>
+                <span style="color:var(--text);"><span id="valSpread">0</span>/25</span>
+              </div>
+              <div style="height:4px; background:var(--panel-2); border-radius:2px; overflow:hidden;">
+                <div id="barSpread"
+                  style="height:100%; width:0%; background:var(--gauge-color, var(--accent)); transition:width 0.5s;">
+                </div>
+              </div>
+            </div>
+            <!-- Velocity -->
+            <div style="flex:1;">
+              <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                <span style="color:var(--muted); text-transform:uppercase; display:flex; align-items:center; gap:4px;">
+                  Velocity
+                  <span style="cursor:help; display:inline-flex;"
+                    title="Measures the acceleration of the attack over recent hours."><svg
+                      xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg></span>
+                </span>
+                <span style="color:var(--text);"><span id="valVelocity">0</span>/25</span>
+              </div>
+              <div style="height:4px; background:var(--panel-2); border-radius:2px; overflow:hidden;">
+                <div id="barVelocity"
+                  style="height:100%; width:0%; background:var(--gauge-color, var(--accent)); transition:width 0.5s;">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sparkline -->
+        <div style="width: 220px; height: 80px; flex-shrink: 0; align-self: flex-end;">
+          <canvas id="threatSparkline"></canvas>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stat-grid" id="statGrid">
+        <div class="stat-card">
+          <div class="stat-label">Total Events</div>
+          <div class="stat-value" id="stTotal">--</div>
+        </div>
+        <div class="stat-card blocked">
+          <div class="stat-label">Blocked</div>
+          <div class="stat-value" id="stBlocked">--</div>
+        </div>
+        <div class="stat-card passed">
+          <div class="stat-label">Passed</div>
+          <div class="stat-value" id="stPassed">--</div>
+        </div>
+        <div class="stat-card rate">
+          <div class="stat-label">Block Rate</div>
+          <div class="stat-value" id="stRate">--</div>
+          <div class="stat-sub" id="stRateSub"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Nginx Events</div>
+          <div class="stat-value" id="stNginx" style="color:var(--ok)">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Apache Events</div>
+          <div class="stat-value" id="stApache" style="color:var(--crit)">--</div>
+        </div>
+      </div>
+
+      <!-- Actionable Insights -->
+      <div class="section-header" id="insightsSection" style="display:none; margin-top:24px;">
+        <h2 style="display:flex;align-items:center;gap:8px; color:var(--text);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          Actionable Insights
+          <span id="insightBadge" class="pill" style="margin-left:4px;"></span>
+        </h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="selectAllBtn" class="btn" style="font-size:12px; padding:4px 10px;"
+            onclick="selectAllInsights()">Select All</button>
+          <button id="deselectAllBtn" class="btn" style="display:none; font-size:12px; padding:4px 10px;"
+            onclick="deselectAllInsights()">Deselect All</button>
+          <button id="bulkBlockBtn" class="btn primary" style="display:none; font-size:12px; padding:4px 10px;"
+            onclick="bulkBlockSelected()">Block Selected</button>
+          <button id="bulkDismissBtn" class="btn" style="display:none; font-size:12px; padding:4px 10px;"
+            onclick="bulkDismissSelected()">Dismiss Selected</button>
+        </div>
+      </div>
+      <div class="panel" id="insightsContainer"
+        style="display:none; padding: 0; max-height: 400px; overflow-y: auto; margin-bottom: 24px;">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Charts Row 1 -->
+      <div class="section-header" id="threatOverviewSection">
+        <h2><svg class="section-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+            <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+          </svg> Threat Overview</h2>
+      </div>
+      <div class="chart-grid three">
+        <div class="panel"><canvas id="statusChart"></canvas></div>
+        <div class="panel"><canvas id="sevChart"></canvas></div>
+        <div class="panel"><canvas id="trendChart"></canvas></div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="chart-grid">
+        <div class="panel"><canvas id="ruleChart"></canvas></div>
+        <div class="panel"><canvas id="ipChart"></canvas></div>
+      </div>
+
+      <!-- Charts Row 3 -->
+      <div class="chart-grid">
+        <div class="panel"><canvas id="urlChart"></canvas></div>
+        <div class="panel"><canvas id="statusDistChart"></canvas></div>
+      </div>
+
+      <!-- Bot Analytics -->
+      <div class="section-header" id="botAnalytics">
+        <h2><svg class="section-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+            <circle cx="12" cy="5" r="2"></circle>
+            <path d="M12 7v4"></path>
+            <line x1="8" y1="16" x2="8" y2="16"></line>
+            <line x1="16" y1="16" x2="16" y2="16"></line>
+          </svg> Bot & AI Analytics</h2>
+      </div>
+      <div class="chart-grid three">
+        <div class="panel" style="display:flex; flex-direction:column;"><canvas id="botClassChart"></canvas></div>
+        <div class="panel table-wrap"
+          style="display:flex; flex-direction:column; max-height:300px; overflow-y:auto; padding:0;">
+          <h3
+            style="padding:16px; margin:0; font-size:13px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--panel);">
+            Top Bot IPs</h3>
+          <div id="topBotIpsPanel">
+            <div class="notice">Loading...</div>
+          </div>
+        </div>
+        <div class="panel table-wrap"
+          style="display:flex; flex-direction:column; max-height:300px; overflow-y:auto; padding:0;">
+          <h3
+            style="padding:16px; margin:0; font-size:13px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--panel);">
+            Recent AI Agents</h3>
+          <div id="aiAgentsPanel">
+            <div class="notice">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geolocation Section -->
+      <div class="section-header" id="geoSection">
+        <h2><svg class="section-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg> Geolocation Intelligence</h2><span class="badge-count" id="geoCount">--</span>
+      </div>
+      <div class="geo-layout">
+        <div class="geo-map-wrap panel">
+          <div class="geo-map-controls">
+            <button class="btn geo-view-btn active" data-view="markers" onclick="setMapView('markers', this)"
+              title="Marker clusters">📍 Markers</button>
+            <button class="btn geo-view-btn" data-view="heat" onclick="setMapView('heat', this)" title="Heat map">🔥
+              Heatmap</button>
+            <button class="btn geo-view-btn" data-view="lines" onclick="setMapView('lines', this)"
+              title="Attack origin lines">⚡ Attack Lines</button>
+          </div>
+          <div id="geoMap" style="height:500px;position:relative;overflow:hidden;border-radius:6px;z-index:1;"></div>
+        </div>
+        <div class="geo-table-wrap panel">
+          <div class="geo-table-header">
+            <h3>Requests by Country</h3>
+          </div>
+          <div id="geoCountryList" style="overflow-y:auto;max-height:450px;">
+            <div class="notice" style="text-align:center;color:var(--muted);">Loading geo data...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Threat Actors -->
+      <div class="section-header">
+        <h2><svg class="section-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12h4l2-9 5 18 3-10h6"></path>
+          </svg> Top Threat Actors</h2>
+      </div>
+      <div class="panel" id="threatActorsPanel">
+        <div class="notice">Loading threat intelligence...</div>
+      </div>
+
+      <!-- Recent Events -->
+      <div class="section-header" id="eventsContainerWrap">
+        <h2><svg class="section-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg> Recent Events</h2><span class="badge-count" id="eventCount">--</span>
+      </div>
+      <div class="timeline-container">
+        <div id="eventsContainer">
+          <div class="notice"
+            style="padding: 32px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: var(--radius);">
+            Loading events...</div>
+        </div>
+        <div id="eventsShowMoreWrap" class="show-more-container" style="display:none;">
+          <button id="eventsShowMoreBtn" class="show-more-btn" onclick="showMoreEvents()">Show More Events</button>
+        </div>
+      </div>
+
+      <!-- Access Log -->
+      <div class="section-header">
+        <h2><svg class="section-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg> Access Log</h2><span class="badge-count" id="accessCount">--</span>
+      </div>
+      <div class="panel table-wrap access-log-container" id="accessPanel">
+        <div class="notice" style="text-align: center; color: var(--muted);">Loading access logs...</div>
+      </div>
+
+      <!-- Error Log -->
+      <div class="section-header">
+        <h2><svg class="section-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg> Error Log</h2><span class="badge-count" id="errorCount">--</span>
+      </div>
+      <div id="errorPanel">
+        <div class="notice" style="text-align: center; color: var(--muted);">Loading error logs...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Advanced Filters Drawer -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <div class="drawer" id="filterDrawer">
+    <div class="drawer-header">
+      <h3>Advanced Filters</h3>
+      <button class="icon-btn" onclick="closeDrawer()">&times;</button>
+    </div>
+    <form id="filterForm" onsubmit="applyFilters(event)">
+      <div class="drawer-body">
+        <div class="form-group">
+          <label>Time Range</label>
+          <select name="range">
+            <option value="1h">Last Hour</option>
+            <option value="6h">Last 6 Hours</option>
+            <option value="24h">Last 24 Hours</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d" selected>Last 30 Days</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Server</label>
+          <select name="server">
+            <option value="all">All Servers</option>
+            <option value="nginx">Nginx</option>
+            <option value="apache">Apache</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Severity</label>
+          <select name="severity">
+            <option value="all">All Severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="ERROR">Error</option>
+            <option value="WARNING">Warning</option>
+            <option value="NOTICE">Notice</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Blocked</label>
+          <select name="blocked">
+            <option value="all">All</option>
+            <option value="1">Blocked Only</option>
+            <option value="0">Passed Only</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>IP Address</label>
+          <input type="text" name="ip" placeholder="e.g. 192.168...">
+        </div>
+        <div class="form-group">
+          <label>Rule ID</label>
+          <input type="text" name="rule_id" placeholder="e.g. 941100">
+        </div>
+        <div class="form-group">
+          <label>Search</label>
+          <input type="text" name="search" placeholder="Request path, IP...">
+        </div>
+        <div class="form-group">
+          <label>Row Limit</label>
+          <select name="limit">
+            <option value="25">25 rows</option>
+            <option value="50">50 rows</option>
+            <option value="100">100 rows</option>
+            <option value="200" selected>200 rows</option>
+            <option value="500">500 rows</option>
+            <option value="1000">1,000 rows</option>
+            <option value="5000">5,000 rows</option>
+            <option value="10000">10,000 rows</option>
+            <option value="all">All Logs</option>
+          </select>
+        </div>
+      </div>
+      <div class="drawer-footer">
+        <button type="submit" class="btn primary" style="flex:1; justify-content: center;">Apply Filters</button>
+        <button type="button" class="btn" onclick="resetFilters()">Reset</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Event Details</h3>
+        <button class="icon-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <p style="color:var(--muted)">Select an event to view details.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Modal -->
+  <div class="modal-overlay" id="actionModal" onclick="if(event.target===this)closeActionModal()">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="actionModalTitle">Review Action</h3>
+        <button class="icon-btn" onclick="closeActionModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="notice" style="background:var(--panel-2); border-left:3px solid var(--warn); margin-bottom:16px;">
+          ⚠️ Review before applying. Test in log-only mode first.
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom: 8px;">
+          <button class="pill" id="lang-nginx" onclick="switchConfigLang('nginx')">Nginx</button>
+          <button class="pill neutral" id="lang-apache" onclick="switchConfigLang('apache')">Apache</button>
+          <button class="pill neutral" id="lang-modsec" onclick="switchConfigLang('modsec')">ModSecurity</button>
+          <button class="pill neutral" id="lang-iptables" onclick="switchConfigLang('iptables')">iptables</button>
+        </div>
+        <pre id="actionModalConfig"
+          style="font-size:12px; white-space:pre-wrap; background:#111; color:#0f0; padding:12px; border-radius:6px; overflow-x:auto; margin-top:0;"></pre>
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px;">
+          <button class="btn" onclick="closeActionModal()">Close</button>
+          <button class="btn" onclick="copyActionText()">Copy</button>
+          <button class="btn primary" id="actionModalApplyBtn" style="display:none;" onclick="applyActionLive()">Apply Live</button>
+          <button class="btn primary" id="actionModalResolveBtn">Mark as Resolved</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rule Management Modal -->
+  <div class="modal-overlay" id="ruleModal" onclick="if(event.target===this)closeRuleModal()">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-body" style="padding: 16px;">
+
+        <!-- Custom Full Rule Section -->
+        <div style="padding:16px; background:var(--panel-2); border-radius:8px; margin-bottom:20px;">
+          <h4 style="margin:0 0 8px 0;">Add Custom ModSecurity Rule</h4>
+          <p style="font-size:0.85em; color:var(--muted); margin-bottom:12px;">Paste a complete raw ModSecurity SecRule
+            below.</p>
+          <textarea id="addRuleRaw"
+            placeholder="SecRule REQUEST_URI &quot;@contains bad_bot&quot; &quot;id:100001,phase:1,deny,status:403,msg:'Bad bot blocked'&quot;"
+            style="width:100%; height:80px; background:var(--bg); border:1px solid var(--border); color:var(--text-strong); padding:8px 12px; border-radius:6px; outline:none; font-family:monospace; margin-bottom:8px;"></textarea>
+          <div style="text-align:right;">
+            <button class="btn" onclick="submitRuleAction('add_custom_rule', this)">Add Rule</button>
+          </div>
+        </div>
+
+        <!-- Rule Explorer Section -->
+        <div
+          style="padding:16px; background:var(--panel-2); border-radius:8px; margin-bottom:20px; display:flex; flex-direction:column;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0;">Core Rule Set (CRS) Explorer</h4>
+            <div style="display:flex; gap:8px;">
+              <button class="btn" id="refreshRulesBtn" style="font-size:11px; padding:4px 8px;"
+                onclick="refreshRulesList(this)">🔄 Refresh Rules</button>
+              <button class="btn primary" id="crsUpdateBtn" style="font-size:11px; padding:4px 8px;"
+                onclick="submitRuleAction('update_crs', this)">Update to latest CRS</button>
+            </div>
+          </div>
+          <p style="font-size:0.85em; color:var(--muted); margin-bottom:12px;">Rules triggered in events are highlighted
+            at the top. Editing a rule safely overrides it locally.</p>
+
+          <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <input type="text" id="ruleSearchInput" placeholder="🔍 Search by Rule ID or description..."
+              oninput="filterRules()"
+              style="flex:1; min-width:180px; background:var(--bg); border:1px solid var(--border); color:var(--text-strong); padding:6px 12px; border-radius:6px; outline:none; font-size:0.85em;">
+
+            <select id="ruleStatusFilter" onchange="filterRules()"
+              style="background:var(--bg); border:1px solid var(--border); color:var(--text-strong); padding:6px 10px; border-radius:6px; outline:none; font-size:0.85em; cursor:pointer;">
+              <option value="all">Status: All</option>
+              <option value="active">Active Only</option>
+              <option value="disabled">Disabled Only</option>
+            </select>
+
+            <select id="ruleTypeFilter" onchange="filterRules()"
+              style="background:var(--bg); border:1px solid var(--border); color:var(--text-strong); padding:6px 10px; border-radius:6px; outline:none; font-size:0.85em; cursor:pointer;">
+              <option value="all">Type: All</option>
+              <option value="custom">Custom Rules</option>
+              <option value="crs">CRS Rules</option>
+            </select>
+
+            <select id="ruleHitFilter" onchange="filterRules()"
+              style="background:var(--bg); border:1px solid var(--border); color:var(--text-strong); padding:6px 10px; border-radius:6px; outline:none; font-size:0.85em; cursor:pointer;">
+              <option value="all">Frequency: All</option>
+              <option value="frequent">Triggered 🔥 Only</option>
+            </select>
+
+            <select id="ruleSortFilter" onchange="filterRules()"
+              style="background:var(--bg); border:1px solid var(--border); color:var(--text-strong); padding:6px 10px; border-radius:6px; outline:none; font-size:0.85em; cursor:pointer;">
+              <option value="default">Sort: Triggered First</option>
+              <option value="newest_edited">Sort: Recently Edited (Newest First)</option>
+              <option value="id_asc">Sort: ID (Low → High)</option>
+              <option value="id_desc">Sort: ID (High → Low)</option>
+            </select>
+          </div>
+
+          <div
+            style="flex:1; border:1px solid var(--border); border-radius:6px; overflow:hidden; display:flex; flex-direction:column; max-height:400px;">
+            <div
+              style="display:grid; grid-template-columns: 80px 1fr 140px; gap:8px; padding:8px 12px; background:var(--bg); border-bottom:1px solid var(--border); font-size:11px; font-weight:700; color:var(--muted);">
+              <div>RULE ID</div>
+              <div>DESCRIPTION</div>
+              <div style="text-align:right;">ACTIONS</div>
+            </div>
+            <div id="ruleExplorerList" style="flex:1; overflow-y:auto; padding-bottom:100px; background:#111;">
+              <div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">Loading rules...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Output -->
+        <div id="ruleTerminalWrapper"
+          style="margin-top:16px; border: 1px solid var(--warn); border-radius: 6px; overflow:hidden;">
+          <div
+            style="background:var(--warn); color:#000; padding:6px 12px; font-size:0.8em; font-weight:bold; display:flex; align-items:center; gap:8px;">
+            ⚠️ CONSOLE: Actions reload Nginx and apply immediately.
+          </div>
+          <pre id="ruleTerminalOutput"
+            style="background:#0a0a0a; color:#0f0; padding:12px; font-size:12px; overflow-x:auto; margin:0; min-height:100px; max-height:200px; overflow-y:auto; font-family:monospace;"></pre>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Rule Modal (Nested or separate) -->
+  <div class="modal-overlay" id="editRuleModal" style="z-index: 10002;"
+    onclick="if(event.target===this)document.getElementById('editRuleModal').classList.remove('open')">
+    <div class="modal" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3 id="editRuleTitle">Edit Rule</h3>
+        <button class="icon-btn"
+          onclick="document.getElementById('editRuleModal').classList.remove('open')">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px;">
+        <p style="font-size:0.85em; color:var(--muted); margin-bottom:12px;">Modifying this rule will disable the
+          upstream version and override it with your custom syntax.</p>
+        <input type="hidden" id="editRuleId">
+        <textarea id="editRuleRaw"
+          style="width:100%; height:200px; background:var(--bg); border:1px solid var(--border); color:var(--text-strong); padding:12px; border-radius:6px; outline:none; font-family:monospace; margin-bottom:16px; white-space:pre;"></textarea>
+        <div style="text-align:right;">
+          <button class="btn" onclick="document.getElementById('editRuleModal').classList.remove('open')"
+            style="margin-right:8px;">Cancel</button>
+          <button class="btn primary" onclick="submitRuleAction('edit_rule', this)">Save & Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/charts.js"></script>
+  <script src="js/app.js?v=8.0"></script>
+</body>
+
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAF Console -- Sign In</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+body{
+  height:100vh;display:flex;align-items:center;justify-content:center;
+  background: radial-gradient(circle at top right, rgba(37,99,235,0.15) 0%, transparent 40%), var(--bg);
+}
+.login-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  padding:40px;width:100%;max-width:380px;box-shadow:var(--shadow-lg);
+  position: relative; z-index: 10;
+}
+.login-card h1{margin:0 0 8px;font-size:1.4em; display:flex; align-items:center; gap:10px;}
+.login-card h1 svg{color: var(--accent);}
+.login-card p{color:var(--muted);margin:0 0 24px;font-size:.9em}
+.login-card input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:1em;outline:none;margin-bottom:16px}
+.login-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.login-card button{width:100%;padding:12px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:600;font-size:1em;cursor:pointer;transition:.15s; box-shadow: 0 4px 14px rgba(37,99,235,0.3);}
+.login-card button:hover{background:var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.4);}
+.login-card button:active{transform: translateY(0);}
+.login-error{background:rgba(220,38,38,.1);border:1px solid var(--crit);color:var(--crit);padding:10px 14px;border-radius:8px;font-size:.85em;margin-bottom:16px}
+.badge-prod{display:inline-block;background:var(--accent);color:#fff;font-size:.7em;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="login-card">
+  <span class="badge-prod">PRODUCTION</span>
+  <h1><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> WAF Console</h1>
+  <p>Authorized personnel only. This system is monitored.</p>
+  {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
+  <form method="post">
+    <input type="password" name="login_pass" placeholder="Enter access password" autofocus autocomplete="current-password">
+    <button type="submit">Authenticate</button>
+  </form>
+</div>
+</body>
+</html>
