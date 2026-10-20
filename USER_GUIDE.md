@@ -86,4 +86,4 @@ This will download all currently filtered ModSecurity events into a structured C
 ---
 
 ### Need Help?
-Ensure your backend PHP environment (`api.php`, `data.php`) is correctly hooked up to your Supabase instance and that your WAF logs are being correctly ingested into the database. Check the **System Health** pill in the top right — if it's green, your database connection and latency are optimal!
+Ensure your backend Python environment (`app.py`, `config.py`) is running and connected to your Supabase instance, and that your WAF log shipper (`log-shipper@apache.service`) is actively ingesting events. Check the **System Health** indicator in the top right — if it's green, your database connection and latency are optimal!

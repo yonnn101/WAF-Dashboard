@@ -1,72 +1,109 @@
 # WAF Centralized Monitoring & Management System
-### Deployment and Configuration Guide
+## Production Deployment & Operational Guide
 
-| | |
-|---|---|
-| **System** | Nginx / Apache + ModSecurity (OWASP CRS) |
-| **Backend** | Supabase (PostgreSQL + REST API) |
-| **Log Pipeline** | Python (log-shipper, geo-enrichment) |
-| **Dashboard** | Python web application |
-| **Document Status** | Setup Complete — Reference Documentation |
+| Attribute | Specification |
+|:---|:---|
+| **Supported Engines** | **Apache 2.4** (`mod_security2`) & **Nginx** (`libmodsecurity3`) |
+| **Ruleset Engine** | **OWASP ModSecurity Core Rule Set (CRS v3.3+)** |
+| **Data Backend** | **Supabase** (PostgreSQL 15+ & PostgREST API) |
+| **Log Shipper** | Python 3 + `watchdog` daemon (inotify event pipeline) |
+| **Enrichment Pipeline** | Python 3 + MaxMind GeoLite2 City (`geo_enrich.py` cron) |
+| **SOC Dashboard** | Python 3 Flask / Gunicorn Security Operations Center Console |
+| **Document Version** | 2.1 — Verified Production Deployment Reference |
 
 ---
 
-## 1. Overview
+## 1. System Architecture Overview
 
-This document describes the deployment of a centralized security monitoring and management system for a ModSecurity-protected web server environment. The system consists of two phases:
-
-- **Phase 1 — Monitoring Pipeline:** ModSecurity, access, and error logs are parsed in near real-time and shipped to a central Supabase database, enriched with IP geolocation data, and surfaced through a web dashboard.
-- **Phase 2 — Administrative Actions:** The dashboard is extended with privileged, audited operations — updating the OWASP Core Rule Set (CRS), disabling individual rules, and adding custom blocking rules — executed through a restricted set of server-side scripts.
-
-### 1.1 Architecture Summary
+The system captures, ships, enriches, and manages Layer 7 HTTP security telemetry across one or more web servers:
 
 ```text
- [ModSecurity / Access / Error Logs]
-              │
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                      WEB SERVER (Apache 2.4 / Nginx)                   │
+ │                                                                        │
+ │   Incoming HTTP Request                                                │
+ │            │                                                           │
+ │            ▼                                                           │
+ │   [ModSecurity Engine] ──(OWASP CRS v3.3+)──► Blocks attack (HTTP 403) │
+ │            │                                                           │
+ │            ▼                                                           │
+ │   [modsec_audit.log] + [access.log] + [error.log]                      │
+ └────────────┬───────────────────────────────────────────────────────────┘
+              │ inotify tailing
               ▼
-     [log-shipper (Python)]  ── near real-time, inotify-based
-              │
+ ┌──────────────────────────────────────┐
+ │   log-shipper@<server>.service       │
+ │   (/opt/log-shipper/shipper.py)      │
+ └────────────┬─────────────────────────┘
+              │ HTTPS REST (service_role key)
               ▼
-        [Supabase (Postgres)]  ◄── [geo_enrich.py]  (scheduled, every 2 minutes)
-              │
-              ▼
-        [Web Dashboard]  ──► [Privileged Scripts]  ──► [Live ModSecurity Config]
-                                     (audited via admin_actions)
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                      SUPABASE CLOUD / POSTGRESQL                       │
+ │                                                                        │
+ │   • modsec_events   (Attack logs, triggered rules, client classification)│
+ │   • access_logs     (HTTP traffic stream)                              │
+ │   • error_logs      (Server error stream)                              │
+ │   • ip_geo_cache    (Enriched country, city, coordinates)              │
+ │   • admin_actions   (Audit trail for rule modifications)               │
+ └────────────▲───────────────────────────────────────▲───────────────────┘
+              │ Reads & Caches                        │ Read-only (anon key)
+              │ (every 2 min cron)                    │ & Audited Actions
+ ┌────────────┴─────────────┐            ┌────────────┴───────────────────┐
+ │ geo_enrich.py            │            │ WAF Security Operations Center │
+ │ (MaxMind GeoLite2 MMDB)  │            │ (Flask Console on Port 8082)   │
+ └──────────────────────────┘            └────────────┬───────────────────┘
+                                                      │ Privileged sudo execution
+                                                      ▼
+                                         ┌────────────────────────────────┐
+                                         │ /opt/waf-admin/scripts/        │
+                                         │ • add-custom-rule.sh           │
+                                         │ • remove-rule.sh / restore...  │
+                                         │ • update-crs.sh / crs-status.sh│
+                                         └────────────────────────────────┘
 ```
 
 ---
 
-## 2. Prerequisites
+## 2. Server Prerequisites & User-Supplied Inputs
 
-- A running web server (Nginx and/or Apache) with ModSecurity and the OWASP CRS installed.
-- A Supabase project (URL, `anon` key, and `service_role` key).
-- Python 3 with `venv` module.
-- Root/sudo access on the host server.
-- The `WAF/Dashboard` repository cloned or copied to your server. 
+### 2.1 System Packages
+Ensure the following packages and tools are installed on your Linux server (Ubuntu 22.04 / 24.04 LTS recommended):
 
-Navigate to your local copy of the repository to begin:
 ```bash
-cd /path/to/WAF/Dashboard
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip curl git jq \
+  libmaxminddb0 libmaxminddb-dev mmdb-bin
 ```
+
+### 2.2 The 3 Inputs You Must Supply Yourself
+Before beginning, make sure you have the following project-specific variables ready:
+
+1. **Supabase Project Credentials** (from your Supabase Dashboard → *Project Settings* → *API*):
+   - **`SUPABASE_URL`**: `https://[YOUR_PROJECT_ID].supabase.co`
+   - **`SUPABASE_SERVICE_KEY`** (`service_role` secret key): Required by the backend log shipper in `/etc/log-shipper/apache.env` to write logs securely bypassing RLS.
+   - **`SUPABASE_ANON_KEY`** (`anon` public key): Required by the dashboard in `config.py` for read-only user queries.
+
+2. **MaxMind GeoLite2 City Database (`GeoLite2-City.mmdb`)**:
+   - Required by the geolocation enrichment cron job.
+   - Create a free account at [MaxMind](https://www.maxmind.com/), download the `GeoLite2-City.mmdb` file, and place it at `/opt/log-shipper/GeoLite2-City.mmdb`.
+
+3. **Dashboard Web Console Password**:
+   - A secure password of your choice configured in `config.py` (`APP_PASSWORD = "YourStrongPasswordHere!"`).
 
 ---
 
-## PHASE 1 — Monitoring Pipeline
+## PHASE 1: Supabase Database Schema
 
-### 3. Supabase Schema — Core Logging Tables
-
-Execute the following in the Supabase SQL Editor to provision the core logging tables.
+Open the **SQL Editor** in your Supabase dashboard and run the complete database migration script:
 
 ```sql
+-- 1. Core ModSecurity Events Table
 drop table if exists modsec_events cascade;
-drop table if exists access_logs cascade;
-drop table if exists error_logs cascade;
-
 create table modsec_events (
   id bigint generated always as identity primary key,
-  server text not null,
-  event_time timestamptz,
-  client_ip text,
+  server text not null,                     -- 'apache' or 'nginx'
+  event_time timestamptz not null default now(),
+  client_ip text not null,
   request_line text,
   method text,
   uri text,
@@ -75,13 +112,21 @@ create table modsec_events (
   rules jsonb default '[]'::jsonb,
   raw_id text,
   user_agent text,
-  client_type text default 'unknown',       -- human | bot | ai_agent | verified_bot | spoofed_bot | headless_browser | script_bot | unknown
+  client_type text default 'unknown',       -- human | bot | ai_agent | verified_bot | script_bot
   bot_score integer,                         -- 1-99, lower = more bot-like
-  verified_bot boolean,
+  verified_bot boolean default false,
   classification_reasons jsonb default '[]'::jsonb,
   created_at timestamptz default now()
 );
 
+-- Indexes for high-speed dashboard telemetry
+create unique index if not exists modsec_events_raw_id_idx on modsec_events (raw_id) where raw_id is not null;
+create index if not exists modsec_events_event_time_idx on modsec_events (event_time desc);
+create index if not exists modsec_events_client_ip_idx on modsec_events (client_ip);
+create index if not exists modsec_events_server_idx on modsec_events (server);
+
+-- 2. Access Logs Table
+drop table if exists access_logs cascade;
 create table access_logs (
   id bigint generated always as identity primary key,
   server text not null,
@@ -92,144 +137,20 @@ create table access_logs (
   size text,
   created_at timestamptz default now()
 );
+create index if not exists access_logs_created_at_idx on access_logs (created_at desc);
 
+-- 3. Error Logs Table
+drop table if exists error_logs cascade;
 create table error_logs (
   id bigint generated always as identity primary key,
   server text not null,
   message text,
   created_at timestamptz default now()
 );
+create index if not exists error_logs_created_at_idx on error_logs (created_at desc);
 
-create unique index modsec_events_raw_id_idx on modsec_events (raw_id) where raw_id is not null;
-create index modsec_events_event_time_idx on modsec_events (event_time desc);
-create index access_logs_created_at_idx on access_logs (created_at desc);
-create index error_logs_created_at_idx on error_logs (created_at desc);
-
-alter table modsec_events enable row level security;
-alter table access_logs enable row level security;
-alter table error_logs enable row level security;
-
-create policy "public read modsec_events" on modsec_events for select using (true);
-create policy "public read access_logs" on access_logs for select using (true);
-create policy "public read error_logs" on error_logs for select using (true);
--- No INSERT policies are defined for the anon role.
--- Writes are permitted only via the service_role key, used exclusively by the log-shipper.
-```
-
-> **Security note:** Row Level Security (RLS) restricts the public/`anon` key to read-only access. All write operations require the `service_role` key, which must never be exposed to client-side or dashboard-facing code.
-
----
-
-### 4. Log Shipper — Installation
-
-Install the Python venv module, create a virtual environment, and install dependencies to avoid breaking system packages:
-
-```bash
-sudo apt update
-sudo apt install -y python3-venv python3-pip
-
-sudo mkdir -p /opt/log-shipper /var/lib/log-shipper
-sudo python3 -m venv /opt/log-shipper/venv
-
-# Install dependencies inside the virtual environment
-sudo /opt/log-shipper/venv/bin/pip install requests watchdog geoip2
-```
-
-Deploy the shipper script from the repository:
-
-```bash
-# Assuming you are in the WAF/Dashboard directory
-sudo cp deployment_scripts/shipper.py /opt/log-shipper/shipper.py
-sudo chmod +x /opt/log-shipper/shipper.py
-```
-
----
-
-### 5. Log Shipper — Environment Configuration
-
-Each monitored web server instance requires its own environment file, specifying its Supabase credentials and server label.
-
-**Nginx** — `/etc/log-shipper/nginx.env`
-
-```bash
-sudo mkdir -p /etc/log-shipper
-sudo tee /etc/log-shipper/nginx.env > /dev/null << 'EOF'
-SUPABASE_URL=https://[Project ID].supabase.co
-SUPABASE_SERVICE_KEY=PASTE_YOUR_SERVICE_ROLE_KEY_HERE
-SERVER_LABEL=nginx
-EOF
-```
-
-**Apache** — `/etc/log-shipper/apache.env`
-
-```bash
-sudo tee /etc/log-shipper/apache.env > /dev/null << 'EOF'
-SUPABASE_URL=https://[Project ID].supabase.co
-SUPABASE_SERVICE_KEY=PASTE_YOUR_SERVICE_ROLE_KEY_HERE
-SERVER_LABEL=apache
-EOF
-```
-
-Restrict access to these files, as they contain the privileged `service_role` credential:
-
-```bash
-sudo chown root:root /etc/log-shipper/*.env
-sudo chmod 600 /etc/log-shipper/*.env
-```
-
----
-
-### 6. Log Shipper — Systemd Service
-
-Create a templated systemd unit at `/etc/systemd/system/log-shipper@.service`:
-
-```ini
-[Unit]
-Description=Log shipper for %i -> Supabase
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-EnvironmentFile=/etc/log-shipper/%i.env
-ExecStart=/opt/log-shipper/venv/bin/python3 /opt/log-shipper/shipper.py
-Restart=always
-RestartSec=3
-User=root
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-```
-
-> **Note:** The `ExecStart` line uses the Python executable inside the virtual environment we created in step 4.
-
-Enable and start an instance per monitored server:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now log-shipper@nginx.service
-# Only run the following if you also use Apache
-# sudo systemctl enable --now log-shipper@apache.service
-```
-
-**Verification:**
-
-```bash
-sudo systemctl status log-shipper@nginx.service
-sudo journalctl -u log-shipper@nginx.service -f
-```
-
-At this stage, ModSecurity, access, and error log entries should be actively populating the corresponding tables in Supabase.
-
----
-
-### 7. Geolocation — Supabase Schema
-
-Execute the following in the Supabase SQL Editor:
-
-```sql
+-- 4. IP Geolocation Cache Table
+drop table if exists ip_geo_cache cascade;
 create table ip_geo_cache (
   ip text primary key,
   country text,
@@ -238,206 +159,379 @@ create table ip_geo_cache (
   city text,
   lat double precision,
   lon double precision,
-  lookup_status text default 'ok',   -- 'ok', 'fail', 'private'
+  lookup_status text default 'ok',          -- 'ok', 'fail', 'private'
   updated_at timestamptz default now()
 );
 
-alter table ip_geo_cache enable row level security;
-
--- Dashboard (anon key) may read
-create policy "public read ip_geo_cache" on ip_geo_cache for select using (true);
--- Writes are permitted only via service_role (the enrichment script)
-```
-
-Verify that Row Level Security is enabled:
-```sql
-select tablename, rowsecurity from pg_tables where tablename = 'ip_geo_cache';
-```
-
----
-
-### 8. Geolocation — Enrichment Script
-
-Deploy the enrichment script from the repository:
-
-```bash
-# Assuming you are in the WAF/Dashboard directory
-sudo cp deployment_scripts/geo_enrich.py /opt/log-shipper/geo_enrich.py
-sudo chmod +x /opt/log-shipper/geo_enrich.py
-```
-
-Download the GeoLite2 City database (`.mmdb`) and place it under `/opt` (or wherever `MMDB_PATH` is configured in `geo_enrich.py`):
-
-```bash
-# Ensure your database is downloaded and extracted, e.g., to /opt/log-shipper/GeoLite2-City.mmdb
-```
-
-Schedule the enrichment job via cron (runs every two minutes):
-
-```bash
-sudo crontab -e
-```
-
-Add the following line (make sure to use the virtual environment's python!):
-
-```text
-*/2 * * * * /opt/log-shipper/venv/bin/python3 /opt/log-shipper/geo_enrich.py >> /var/log/geo_enrich.log 2>&1
-```
-
-Initialize the log file and verify execution:
-
-```bash
-sudo touch /var/log/geo_enrich.log
-sudo tail -f /var/log/geo_enrich.log
-```
-
-Within a few minutes, records should begin appearing in the `ip_geo_cache` table.
-
-> **✅ Phase 1 Complete** — the monitoring pipeline (log ingestion, geolocation enrichment, and dashboard visualization) is fully operational.
-
----
-
-## PHASE 2 — Administrative Actions
-
-### 9. Audit Log — Supabase Schema
-
-All privileged administrative actions performed through the dashboard are recorded for accountability and traceability.
-
-```sql
+-- 5. Administrative Audit Log Table
+drop table if exists admin_actions cascade;
 create table admin_actions (
   id bigint generated always as identity primary key,
-  action_type text not null,       -- 'crs_update' | 'rule_remove' | 'rule_add'
-  target text,                     -- rule id, keyword, or CRS version
+  action_type text not null,                -- 'crs_update' | 'rule_remove' | 'rule_add' | 'rule_restore'
+  target text,                              -- rule id, keyword, or CRS version
   success boolean not null,
   output text,
-  performed_by text,
+  performed_by text default 'soc-admin',
   performed_at timestamptz default now()
 );
+create index if not exists admin_actions_performed_at_idx on admin_actions (performed_at desc);
 
+-- 6. Row Level Security (RLS) Policies
+alter table modsec_events enable row level security;
+alter table access_logs enable row level security;
+alter table error_logs enable row level security;
+alter table ip_geo_cache enable row level security;
 alter table admin_actions enable row level security;
+
+-- Read-only access for the web dashboard (via Anon Key)
+create policy "public read modsec_events" on modsec_events for select using (true);
+create policy "public read access_logs" on access_logs for select using (true);
+create policy "public read error_logs" on error_logs for select using (true);
+create policy "public read ip_geo_cache" on ip_geo_cache for select using (true);
 create policy "public read admin_actions" on admin_actions for select using (true);
--- Writes are permitted only via service_role, consistent with all other tables
+
+-- Writes are restricted strictly to service_role (log-shipper & admin scripts)
 ```
 
 ---
 
-### 10. Privileged Scripts — Deployment
+## PHASE 2: Web Server & ModSecurity Configuration
 
-Create the dedicated scripts directory and deploy each administrative script:
+### Option A: Apache 2.4 Configuration (Recommended for Apache Environments)
 
-```bash
-sudo mkdir -p /opt/waf-admin/scripts/
-sudo mkdir -p /var/log/waf-admin/
+1. **Install Apache ModSecurity & CRS:**
+   ```bash
+   sudo apt install -y apache2 libapache2-mod-security2
+   sudo a2enmod security2 headers unique_id
+   ```
 
-# Copy from the repository
-sudo cp admin_scripts/*.sh /opt/waf-admin/scripts/
-sudo cp manage_rules.py /opt/waf-admin/scripts/
+2. **Configure ModSecurity (`/etc/modsecurity/modsecurity.conf`):**
+   ```bash
+   sudo cp /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
+   ```
+   Edit `/etc/modsecurity/modsecurity.conf` and ensure the following directives are active:
+   ```apache
+   SecRuleEngine On
+   SecRequestBodyAccess On
+   SecResponseBodyAccess Off
 
-sudo chown root:root /opt/waf-admin/scripts/*
-sudo chmod 700 /opt/waf-admin/scripts/*
-```
+   # Audit Log Configuration
+   SecAuditEngine RelevantOnly
+   SecAuditLogRelevantStatus "^(?:5|4(?!04))"
+   SecAuditLogParts ABIJDEFHZ
+   SecAuditLogType Serial
+   SecAuditLog /var/log/apache2/modsec_audit.log
+   ```
 
-> **Required:** Each script writes to its own dedicated log file under `/var/log/waf-admin/` for auditability of individual invocations, independent of the centralized `admin_actions` table. Ensure `/var/log/waf-admin/` is created and writable by root.
+3. **Initialize the Audit Log with Proper Permissions:**
+   ```bash
+   sudo touch /var/log/apache2/modsec_audit.log
+   sudo chown www-data:adm /var/log/apache2/modsec_audit.log
+   sudo chmod 640 /var/log/apache2/modsec_audit.log
+   ```
 
----
+4. **Install & Track OWASP CRS as a Git Repository:**
+   > ⚠️ **CRITICAL REQUIREMENT:** The management scripts (`crs-status.sh`, `update-crs.sh`) require `/usr/local/modsecurity-crs/` to be a valid Git repository to check tags and perform automated upstream updates.
+   ```bash
+   sudo rm -rf /usr/local/modsecurity-crs
+   sudo git clone https://github.com/coreruleset/coreruleset.git /usr/local/modsecurity-crs
+   cd /usr/local/modsecurity-crs
+   sudo git checkout v3.3.8
+   sudo cp crs-setup.conf.example crs-setup.conf
+   ```
 
-### 11. Privilege Escalation — Sudo Configuration
+5. **Set Up Custom Rules & Rule Exclusions Directory:**
+   ```bash
+   sudo mkdir -p /usr/local/modsecurity-crs/rules/custom
+   sudo touch /usr/local/modsecurity-crs/rules/custom/rule-exclusions.conf
+   sudo touch /usr/local/modsecurity-crs/rules/custom/custom-rules.conf
+   sudo chown -R root:root /usr/local/modsecurity-crs/rules/custom
+   sudo chmod -R 755 /usr/local/modsecurity-crs/rules/custom
+   ```
 
-Grant the application's runtime user narrow, script-specific `sudo` access — limited strictly to the five administrative scripts, with no broader privileges granted.
+6. **Wire Up ModSecurity in Apache (`/etc/apache2/mods-enabled/security2.conf`):**
+   ```apache
+   <IfModule security2_module>
+       SecDataDir /var/cache/modsecurity
+       IncludeOptional /etc/modsecurity/*.conf
+       IncludeOptional /usr/local/modsecurity-crs/crs-setup.conf
+       IncludeOptional /usr/local/modsecurity-crs/rules/*.conf
+       IncludeOptional /usr/local/modsecurity-crs/rules/custom/*.conf
+   </IfModule>
+   ```
 
-```bash
-sudo visudo -f /etc/sudoers.d/waf-admin
-```
-
-Add the following entry, replacing `<username>` with the actual system user under which the dashboard application (`app.py`) runs:
-
-```
-<username> ALL=(ALL) NOPASSWD: /opt/waf-admin/scripts/add-custom-rule.sh, \
-  /opt/waf-admin/scripts/crs-status.sh, \
-  /opt/waf-admin/scripts/remove-rule.sh, \
-  /opt/waf-admin/scripts/restore-rule.sh, \
-  /opt/waf-admin/scripts/update-crs.sh, \
-  /opt/waf-admin/scripts/manage_rules.py
-```
-
-> ⚠️ **Security consideration:** This grant should reference exact script paths only — never a wildcard or directory-level grant — to ensure the privileged surface remains limited to the approved, individually-audited operations.
-
----
-
-### 12. Custom Rules — Include Directive
-
-Register the custom rules directory with ModSecurity so newly added rules are loaded on reload:
-
-```bash
-sudo mkdir -p /usr/local/modsecurity-crs/rules/custom/
-sudo touch /usr/local/modsecurity-crs/rules/custom/rule-exclusions.conf
-echo "Include /usr/local/modsecurity-crs/rules/custom/*.conf" | sudo tee -a /etc/nginx/modsec/main.conf
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-If you prefer to align with CRS rule order, place `REQUEST-948-LOCAL-RULES.conf` appropriately:
-```bash
-sudo touch /usr/local/modsecurity-crs/rules/REQUEST-948-LOCAL-RULES.conf
-```
-
----
-
-### 13. Dashboard — Deployment
-
-Finally, set up the web dashboard itself.
-
-```bash
-# Still inside the WAF/Dashboard directory
-python3 -m venv myenv
-
-# Activate the virtual environment
-source myenv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the dashboard application
-python3 app.py
-```
-
-At this point, verify that all three administrative API endpoints (CRS update, rule removal, custom rule addition) respond correctly, and confirm the live site continues serving traffic normally.
+7. **Test Configuration and Reload Apache:**
+   ```bash
+   sudo apache2ctl configtest
+   # Output must be: Syntax OK
+   sudo systemctl reload apache2
+   ```
 
 ---
 
-## 14. Post-Deployment Verification Checklist
+### Option B: Nginx Configuration
 
-| # | Check | Expected Result |
-|---|---|---|
-| 1 | `sudo systemctl status log-shipper@nginx.service` | `active (running)` |
-| 2 | Supabase → `modsec_events` table | New rows appear as traffic occurs |
-| 3 | Supabase → `ip_geo_cache` table | Rows populated for client IPs |
-| 4 | `sudo tail -f /var/log/geo_enrich.log` | Successful enrichment entries every 2 minutes |
-| 5 | `sudo /opt/waf-admin/scripts/crs-status.sh` | Returns current/latest CRS version |
-| 6 | `sudo nginx -t` | `syntax is ok` / `test is successful` |
-| 7 | Dashboard: CRS update action | Version updates, audit row created in `admin_actions` |
-| 8 | Dashboard: rule removal action | Rule excluded, audit row created in `admin_actions` |
-| 9 | Dashboard: custom rule addition | Rule blocks matching traffic (HTTP 403), audit row created |
+1. **Install Nginx ModSecurity v3 Connector:**
+   ```bash
+   sudo apt install -y nginx libmodsecurity3
+   ```
 
----
+2. **Configure ModSecurity Include in `/etc/nginx/modsec/main.conf`:**
+   ```nginx
+   Include /etc/nginx/modsec/modsecurity.conf
+   Include /usr/local/modsecurity-crs/crs-setup.conf
+   Include /usr/local/modsecurity-crs/rules/*.conf
+   Include /usr/local/modsecurity-crs/rules/custom/*.conf
+   ```
 
-## 15. File & Path Reference
-
-| Component | Path |
-|---|---|
-| Log shipper | `/opt/log-shipper/shipper.py` |
-| Geo enrichment script | `/opt/log-shipper/geo_enrich.py` |
-| Shipper virtual env | `/opt/log-shipper/venv/` |
-| Shipper environment files | `/etc/log-shipper/*.env` |
-| Shipper systemd unit | `/etc/systemd/system/log-shipper@.service` |
-| Shipper state (offsets) | `/var/lib/log-shipper/` |
-| Admin scripts | `/opt/waf-admin/scripts/` |
-| Admin script logs | `/var/log/waf-admin/` |
-| Sudoers grant | `/etc/sudoers.d/waf-admin` |
-| CRS installation | `/usr/local/modsecurity-crs/` |
-| Custom / local rules | `/usr/local/modsecurity-crs/rules/REQUEST-948-LOCAL-RULES.conf` |
-| ModSecurity main config | `/etc/nginx/modsec/main.conf` |
-| Dashboard code | `/path/to/WAF/Dashboard/` |
+3. **Verify and Reload Nginx:**
+   ```bash
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
 
 ---
 
-*End of document.*
+## PHASE 3: Log Shipper & Ingestion Pipeline
+
+The log shipper continuously monitors `/var/log/apache2/modsec_audit.log` (or Nginx audit log), parses events into structured JSON, and ships them via HTTPS to Supabase.
+
+1. **Create Virtual Environment & Install Dependencies:**
+   ```bash
+   sudo mkdir -p /opt/log-shipper /var/lib/log-shipper /etc/log-shipper
+   sudo python3 -m venv /opt/log-shipper/venv
+
+   # Note: python-dotenv is required for environment parsing
+   sudo /opt/log-shipper/venv/bin/pip install --upgrade pip
+   sudo /opt/log-shipper/venv/bin/pip install requests watchdog geoip2 python-dotenv
+   ```
+
+2. **Deploy Shipper Script:**
+   ```bash
+   # From the repository root:
+   sudo cp deployment_scripts/shipper.py /opt/log-shipper/shipper.py
+   sudo chmod 755 /opt/log-shipper/shipper.py
+   ```
+
+3. **Create Environment File (`/etc/log-shipper/apache.env`):**
+   ```bash
+   sudo tee /etc/log-shipper/apache.env > /dev/null << 'EOF'
+   SUPABASE_URL=https://[YOUR_PROJECT_ID].supabase.co
+   SUPABASE_SERVICE_KEY=[YOUR_SUPABASE_SERVICE_ROLE_KEY]
+   SERVER_LABEL=apache
+   EOF
+
+   # Secure the credentials:
+   sudo chown root:root /etc/log-shipper/*.env
+   sudo chmod 600 /etc/log-shipper/*.env
+   ```
+   *(For Nginx environments, create `/etc/log-shipper/nginx.env` with `SERVER_LABEL=nginx`)*
+
+4. **Install Systemd Shipper Service (`/etc/systemd/system/log-shipper@.service`):**
+   ```ini
+   [Unit]
+   Description=WAF Log Shipper for %i -> Supabase
+   After=network-online.target
+   Wants=network-online.target
+
+   [Service]
+   Type=simple
+   EnvironmentFile=/etc/log-shipper/%i.env
+   ExecStart=/opt/log-shipper/venv/bin/python3 /opt/log-shipper/shipper.py
+   Restart=always
+   RestartSec=3
+   User=root
+   StandardOutput=journal
+   StandardError=journal
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+5. **Start and Enable Service:**
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now log-shipper@apache.service
+
+   # Check status:
+   sudo systemctl status log-shipper@apache.service
+   ```
+
+---
+
+## PHASE 4: Geolocation Enrichment Pipeline
+
+1. **Deploy Enrichment Script:**
+   ```bash
+   sudo cp deployment_scripts/geo_enrich.py /opt/log-shipper/geo_enrich.py
+   sudo chmod 755 /opt/log-shipper/geo_enrich.py
+   ```
+
+2. **Install MaxMind GeoLite2 City Database:**
+   Place `GeoLite2-City.mmdb` into `/opt/log-shipper/`:
+   ```bash
+   # Verify the file is present and readable:
+   ls -la /opt/log-shipper/GeoLite2-City.mmdb
+   ```
+
+3. **Configure Cron Job:**
+   Open root cron:
+   ```bash
+   sudo crontab -e
+   ```
+   Add the 2-minute recurring enrichment job:
+   ```cron
+   */2 * * * * /opt/log-shipper/venv/bin/python3 /opt/log-shipper/geo_enrich.py >> /var/log/geo_enrich.log 2>&1
+   ```
+
+4. **Initialize Log & Test Run:**
+   ```bash
+   sudo touch /var/log/geo_enrich.log
+   sudo /opt/log-shipper/venv/bin/python3 /opt/log-shipper/geo_enrich.py
+   cat /var/log/geo_enrich.log
+   ```
+
+---
+
+## PHASE 5: Privileged Administrative Management Scripts
+
+These scripts allow the SOC console to query CRS status, add custom rules, and disable/restore rules safely without granting arbitrary root privileges to the web app.
+
+1. **Deploy Scripts to `/opt/waf-admin/scripts/`:**
+   ```bash
+   sudo mkdir -p /opt/waf-admin/scripts /var/log/waf-admin
+   sudo cp admin_scripts/*.sh /opt/waf-admin/scripts/
+   sudo cp manage_rules.py /opt/waf-admin/scripts/
+
+   sudo chown -R root:root /opt/waf-admin/scripts
+   sudo chmod 700 /opt/waf-admin/scripts/*
+   sudo chmod 755 /var/log/waf-admin
+   ```
+
+2. **Configure Sudoers Privileges (`/etc/sudoers.d/waf-admin`):**
+   ```bash
+   sudo visudo -f /etc/sudoers.d/waf-admin
+   ```
+   Add the following (replace `ubuntu` with your application execution user):
+   ```sudoers
+   ubuntu ALL=(ALL) NOPASSWD: /opt/waf-admin/scripts/add-custom-rule.sh, \
+     /opt/waf-admin/scripts/crs-status.sh, \
+     /opt/waf-admin/scripts/remove-rule.sh, \
+     /opt/waf-admin/scripts/restore-rule.sh, \
+     /opt/waf-admin/scripts/update-crs.sh, \
+     /opt/waf-admin/scripts/manage_rules.py
+   ```
+
+3. **Verify Script Execution:**
+   ```bash
+   # Test CRS status check (must return valid JSON):
+   sudo /opt/waf-admin/scripts/crs-status.sh
+   # Expected: {"installed": true, "version": "v3.3.8", ...}
+   ```
+
+---
+
+## PHASE 6: Web Dashboard Deployment
+
+1. **Configure Environment in Repository (`config.py` / `.env`):**
+   ```bash
+   cd /home/ubuntu/WAF-Dashboard
+   ```
+   Ensure [config.py](file:///home/ubuntu/WAF-Dashboard/config.py) contains:
+   ```python
+   SUPABASE_URL = "https://[YOUR_PROJECT_ID].supabase.co"
+   SUPABASE_ANON_KEY = "[YOUR_SUPABASE_ANON_PUBLIC_KEY]"
+   APP_PASSWORD = "[YOUR_STRONG_DASHBOARD_PASSWORD]"
+   AUTH_ENABLED = True
+   ```
+
+2. **Run as a Managed Systemd Service (`/etc/systemd/system/waf-dashboard.service`):**
+   ```ini
+   [Unit]
+   Description=WAF Security Operations Center Console
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=ubuntu
+   WorkingDirectory=/home/ubuntu/WAF-Dashboard
+   ExecStart=/home/ubuntu/WAF-Dashboard/myenv/bin/python3 app.py
+   Restart=always
+   RestartSec=3
+   Environment=PYTHONUNBUFFERED=1
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+3. **Start and Enable Service:**
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now waf-dashboard.service
+   sudo systemctl status waf-dashboard.service
+   ```
+
+4. **Access the Console:**
+   - URL: `http://<SERVER_IP>:8082/`
+   - Default Password: `[YOUR_STRONG_DASHBOARD_PASSWORD]`
+
+---
+
+## PHASE 7: End-to-End Attack Verification Suite
+
+To verify that the entire pipeline (ModSecurity -> Local Audit Log -> Log Shipper -> Supabase -> SOC Dashboard) is functioning:
+
+1. **Deploy a Local Test Site:**
+   Ensure `/var/www/html/index.html` exists and is served by Apache.
+
+2. **Execute Common Attack Vectors:**
+   ```bash
+   # 1. SQL Injection (Rule 942100)
+   curl -s -i "http://127.0.0.1/index.html?id=1'+OR+'1'='1" | head -n 5
+
+   # 2. Remote Command Execution (Rule 932100)
+   curl -s -i "http://127.0.0.1/index.html?exec=/bin/cat+/etc/passwd" | head -n 5
+
+   # 3. Cross-Site Scripting (Rule 941100)
+   curl -s -i "http://127.0.0.1/index.html?q=<script>alert(1)</script>" | head -n 5
+
+   # 4. Path Traversal (Rule 930100)
+   curl -s -i "http://127.0.0.1/index.html?file=../../../../etc/shadow" | head -n 5
+   ```
+   **Expected Response:** `HTTP/1.1 403 Forbidden` for all attacks.
+
+3. **Verify Dashboard Telemetry:**
+   - Check the **Recent Events** log stream on `http://127.0.0.1:8082/`.
+   - The requests will appear with `⛔ 403 BLOCKED`, HTTP status `403`, client IP `127.0.0.1`, and rule tags `#942100`, `#932100`, etc.
+
+---
+
+## 8. Stage-by-Stage Verification Checklist
+
+Use this checklist as you progress through each deployment phase to confirm your setup:
+
+| Stage / Milestone | Verification Command | Expected Output |
+|:---|:---|:---|
+| **1. Apache & ModSec Config** | `sudo apache2ctl configtest` | `Syntax OK` |
+| **2. Audit Log File** | `ls -la /var/log/apache2/modsec_audit.log` | Ownership `www-data:adm` and permissions `640` |
+| **3. CRS Git Repository** | `cd /usr/local/modsecurity-crs && git status` | `On branch master` (or detached at tag `v3.3.8`) |
+| **4. Log Shipper Service** | `sudo systemctl status log-shipper@apache.service` | `Active: active (running)` |
+| **5. Geo-Enrichment Cron** | `sudo tail -n 20 /var/log/geo_enrich.log` | `Processed X IP(s)` or `No un-enriched IPs` |
+| **6. CRS Admin Scripts** | `sudo /opt/waf-admin/scripts/crs-status.sh` | Valid JSON with `"installed": true, "version": "v3.3.8"` |
+| **7. Sudoers Configuration** | `sudo -u ubuntu sudo -n /opt/waf-admin/scripts/crs-status.sh` | Returns JSON without prompting for a password |
+| **8. Dashboard Service** | `sudo systemctl status waf-dashboard.service` | `Active: active (running)` on port 8082 |
+| **9. Attack Mitigation** | `curl -s -o /dev/null -w "%{http_code}\n" "http://127.0.0.1/?exec=/bin/sh"` | **`403`** (Forbidden) |
+| **10. SOC Live Stream** | Open `http://<SERVER_IP>:8082/` in your browser | Event appears in the real-time event timeline |
+
+---
+
+## 9. Troubleshooting & Common Pitfalls Reference
+
+| Symptom / Error | Root Cause | Solution |
+|:---|:---|:---|
+| `ERROR: ... is not a git repository` | `/usr/local/modsecurity-crs/` was extracted from an archive without `.git` | Clone via `git clone https://github.com/coreruleset/coreruleset.git /usr/local/modsecurity-crs` and checkout tag. |
+| `ModuleNotFoundError: No module named 'dotenv'` | `python-dotenv` missing in shipper venv | Run `/opt/log-shipper/venv/bin/pip install python-dotenv`. |
+| ModSecurity does not block attacks | Engine running in `DetectionOnly` | Change `SecRuleEngine DetectionOnly` to `SecRuleEngine On` in `/etc/modsecurity/modsecurity.conf` and reload Apache. |
+| Log shipper service fails to start | Missing environment file or permissions | Ensure `/etc/log-shipper/apache.env` exists with mode `600` and contains valid `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`. |
+| Audit log stays 0 bytes | Apache lacks write access to audit log | Run `sudo chown www-data:adm /var/log/apache2/modsec_audit.log && sudo chmod 640 /var/log/apache2/modsec_audit.log`. |
+| Sudo error when managing rules | Sudoers path mismatch | Check `/etc/sudoers.d/waf-admin` matches exact user and paths. Validate with `sudo visudo -c`. |
