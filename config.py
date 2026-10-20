@@ -1,8 +1,8 @@
 # WAF Security Console -- Configuration
 
 # Supabase credentials
-SUPABASE_URL = 'https://pjtfbfqsvhrdzjqwhhrm.supabase.co'
-SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdGZiZnFzdmhyZHpqcXdoaHJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NjU1MDQsImV4cCI6MjEwMTM0MTUwNH0.zHalRm9o4WL8IgyLUuyDV2-IFg2HQ3ex8jfJtGY7IxI'
+SUPABASE_URL = 'https://lrvjjbyjynfpgiruqmcp.supabase.co'
+SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxydmpqYnlqeW5mcGdpcnVxbWNwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjUxMjk4MCwiZXhwIjoyMTA4MDg4OTgwfQ.S77t4sOnRR_fQde-AuxdMUjovaXKuVq381FOf-dtHnw'
 
 # Auth settings
 APP_PASSWORD = 'SecOps2024!'

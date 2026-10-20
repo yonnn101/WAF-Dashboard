@@ -22,19 +22,29 @@ if [[ ! -f "$EXCLUSIONS_FILE" ]] || ! grep -qE "SecRuleRemoveById[[:space:]]+$RU
 fi
 
 cp "$EXCLUSIONS_FILE" "$EXCLUSIONS_FILE.bak"
-grep -vE "SecRuleRemoveById[[:space:]]+$RULE_ID(\s|$)" "$EXCLUSIONS_FILE.bak" > "$EXCLUSIONS_FILE"
+grep -vE "SecRuleRemoveById[[:space:]]+$RULE_ID(\s|$)" "$EXCLUSIONS_FILE.bak" > "$EXCLUSIONS_FILE" || true
 
-if command -v nginx >/dev/null && ! NGINX_MSG=$(nginx -t 2>&1); then
-    mv "$EXCLUSIONS_FILE.bak" "$EXCLUSIONS_FILE"
-    echo "ROLLED_BACK: removing exclusion for $RULE_ID broke config"
-    echo "$NGINX_MSG"
-    log "FAILED to restore $RULE_ID, rolled back. nginx -t output: $NGINX_MSG"
-    exit 1
+if command -v nginx >/dev/null; then
+    if ! NGINX_MSG=$(nginx -t 2>&1); then
+        mv "$EXCLUSIONS_FILE.bak" "$EXCLUSIONS_FILE"
+        echo "ROLLED_BACK: removing exclusion for $RULE_ID broke config"
+        echo "$NGINX_MSG"
+        log "FAILED to restore $RULE_ID, rolled back. nginx -t output: $NGINX_MSG"
+        exit 1
+    fi
+    systemctl reload nginx
+elif command -v apache2ctl >/dev/null; then
+    if ! APACHE_MSG=$(apache2ctl configtest 2>&1); then
+        mv "$EXCLUSIONS_FILE.bak" "$EXCLUSIONS_FILE"
+        echo "ROLLED_BACK: removing exclusion for $RULE_ID broke config"
+        echo "$APACHE_MSG"
+        log "FAILED to restore $RULE_ID, rolled back. apache2ctl output: $APACHE_MSG"
+        exit 1
+    fi
+    systemctl reload apache2
 fi
 rm -f "$EXCLUSIONS_FILE.bak"
 chmod 644 "$EXCLUSIONS_FILE"
-
-systemctl reload nginx
 
 echo "RESTORED: $RULE_ID"
 log "SUCCESS restored rule $RULE_ID"

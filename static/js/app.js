@@ -99,7 +99,7 @@ function renderDashboard(d) {
   updateStatValue('stTotal', d.stats.total);
   updateStatValue('stBlocked', d.stats.blocked);
   updateStatValue('stPassed', d.stats.passed);
-  document.getElementById('stRate').textContent    = d.stats.block_rate + '%';
+  document.getElementById('stRate').textContent = d.stats.block_rate + '%';
   document.getElementById('stRateSub').textContent = d.stats.total > 0 ? (d.stats.blocked + ' of ' + d.stats.total) : 'No data';
   updateStatValue('stNginx', d.server_counts.nginx ?? 0);
   updateStatValue('stApache', d.server_counts.apache ?? 0);
@@ -113,65 +113,65 @@ function renderDashboard(d) {
   renderUrlChart(d.top_urls);
   renderStatusDistChart(d.status_counts);
   if (typeof renderBotClassChart === 'function' && d.bot_counts) renderBotClassChart(d.bot_counts);
-  
+
   // Threat Index
   if (d.threat_index) {
-      const ti = d.threat_index;
-      
-      const elScore = document.getElementById('threatScore');
-      if (elScore) {
-          elScore.textContent = ti.score;
-          elScore.style.color = ti.color;
-      }
-      
-      const elLevel = document.getElementById('threatLevel');
-      if (elLevel) {
-          elLevel.textContent = ti.level;
-          elLevel.style.color = ti.color;
-      }
-      
-      const elSafety = document.getElementById('safetyScore');
-      if (elSafety) {
-          elSafety.textContent = ti.safety_score;
-      }
-      
-      const circumference = 339.292;
-      const offset = circumference - (ti.score / 100) * circumference;
-      const gaugeFills = document.querySelectorAll('.gauge-fill');
-      gaugeFills.forEach(g => {
-          g.style.setProperty('--gauge-color', ti.color);
-          g.style.strokeDashoffset = offset;
+    const ti = d.threat_index;
+
+    const elScore = document.getElementById('threatScore');
+    if (elScore) {
+      elScore.textContent = ti.score;
+      elScore.style.color = ti.color;
+    }
+
+    const elLevel = document.getElementById('threatLevel');
+    if (elLevel) {
+      elLevel.textContent = ti.level;
+      elLevel.style.color = ti.color;
+    }
+
+    const elSafety = document.getElementById('safetyScore');
+    if (elSafety) {
+      elSafety.textContent = ti.safety_score;
+    }
+
+    const circumference = 339.292;
+    const offset = circumference - (ti.score / 100) * circumference;
+    const gaugeFills = document.querySelectorAll('.gauge-fill');
+    gaugeFills.forEach(g => {
+      g.style.setProperty('--gauge-color', ti.color);
+      g.style.strokeDashoffset = offset;
+    });
+
+    let arrow = '−';
+    if (ti.trend === 'rising') arrow = '↑';
+    else if (ti.trend === 'falling') arrow = '↓';
+
+    const trendEl = document.getElementById('threatTrend');
+    if (trendEl) {
+      trendEl.textContent = `${arrow} ${Math.abs(ti.trend_percent)}%`;
+      trendEl.className = ti.trend;
+      trendEl.style.color = ti.trend === 'rising' ? 'var(--warn)' : (ti.trend === 'falling' ? 'var(--ok)' : 'var(--muted)');
+    }
+
+    if (ti.components) {
+      ['Volume', 'Severity', 'Spread', 'Velocity'].forEach(comp => {
+        const val = ti.components[comp];
+        const elVal = document.getElementById('val' + comp);
+        const elBar = document.getElementById('bar' + comp);
+        if (elVal) elVal.textContent = val;
+        if (elBar) {
+          elBar.style.width = (val / 25 * 100) + '%';
+          elBar.style.setProperty('--gauge-color', ti.color);
+        }
       });
-      
-      let arrow = '−';
-      if (ti.trend === 'rising') arrow = '↑';
-      else if (ti.trend === 'falling') arrow = '↓';
-      
-      const trendEl = document.getElementById('threatTrend');
-      if (trendEl) {
-          trendEl.textContent = `${arrow} ${Math.abs(ti.trend_percent)}%`;
-          trendEl.className = ti.trend;
-          trendEl.style.color = ti.trend === 'rising' ? 'var(--warn)' : (ti.trend === 'falling' ? 'var(--ok)' : 'var(--muted)');
-      }
-      
-      if (ti.components) {
-          ['Volume', 'Severity', 'Spread', 'Velocity'].forEach(comp => {
-              const val = ti.components[comp];
-              const elVal = document.getElementById('val' + comp);
-              const elBar = document.getElementById('bar' + comp);
-              if (elVal) elVal.textContent = val;
-              if (elBar) {
-                  elBar.style.width = (val / 25 * 100) + '%';
-                  elBar.style.setProperty('--gauge-color', ti.color);
-              }
-          });
-      }
-      
-      document.title = `[${ti.level}] WAF Security Console`;
-      
-      if (typeof renderThreatSparkline === 'function' && d.hourly_threat_index) {
-          renderThreatSparkline(d.hourly_threat_index, ti.color);
-      }
+    }
+
+    document.title = `[${ti.level}] WAF Security Console`;
+
+    if (typeof renderThreatSparkline === 'function' && d.hourly_threat_index) {
+      renderThreatSparkline(d.hourly_threat_index, ti.color);
+    }
   }
 
   // Sections
@@ -201,21 +201,21 @@ function renderInsights(insights, summary) {
   const section = document.getElementById('insightsSection');
   const container = document.getElementById('insightsContainer');
   const badge = document.getElementById('insightBadge');
-  
+
   if (!section || !container) return;
-  
+
   if (!insights || insights.length === 0) {
     section.style.display = 'none';
     container.style.display = 'none';
     return;
   }
-  
+
   section.style.display = 'block';
   container.style.display = 'block';
   badge.textContent = `${summary.needs_action} Actionable`;
-  
+
   badge.className = 'pill ' + (summary.critical > 0 ? 'crit' : summary.needs_action > 0 ? 'warn' : 'neutral');
-  
+
   const typeIcons = {
     'brute_force': '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--crit)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
     'escalation': '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>',
@@ -228,20 +228,20 @@ function renderInsights(insights, summary) {
   };
 
   let html = `<div style="display:flex; flex-direction:column;">`;
-  
+
   window.currentInsights = insights;
-  
+
   insights.forEach(insight => {
     const icon = typeIcons[insight.type] || '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
     const conf = Math.round(insight.confidence * 100);
-    
+
     let isLikelyFp = false;
     if (insight.confidence <= 0.7 && insight.affected_paths && insight.affected_paths.length > 0) {
-       const staticPaths = ['/favicon.ico', '/robots.txt', '.png', '.jpg', '.css', '.js'];
-       isLikelyFp = insight.affected_paths.some(p => staticPaths.some(sp => p.endsWith(sp) || p === sp));
+      const staticPaths = ['/favicon.ico', '/robots.txt', '.png', '.jpg', '.css', '.js'];
+      isLikelyFp = insight.affected_paths.some(p => staticPaths.some(sp => p.endsWith(sp) || p === sp));
     }
     const fpTag = isLikelyFp ? `<span class="pill" style="color:#58a6ff; border-color:#58a6ff;">Likely FP</span>` : '';
-    
+
     html += `
     <div class="insight-row">
       <div class="insight-chk-wrap">
@@ -260,8 +260,8 @@ function renderInsights(insights, summary) {
         <p style="margin:4px 0 8px 0; font-size:13px; color:var(--muted); line-height:1.4;">${esc(insight.description)}</p>
         
         <div style="display:flex; gap:16px; font-size:12px; color:var(--muted); margin-bottom:12px;">
-          ${insight.affected_ips.length ? `<div><strong style="color:var(--text-light)">IPs:</strong> ${esc(insight.affected_ips.slice(0,3).join(', '))}${insight.affected_ips.length>3?'...':''}</div>` : ''}
-          ${insight.affected_paths.length ? `<div><strong style="color:var(--text-light)">Paths:</strong> ${esc(insight.affected_paths.slice(0,2).join(', '))}${insight.affected_paths.length>2?'...':''}</div>` : ''}
+          ${insight.affected_ips.length ? `<div><strong style="color:var(--text-light)">IPs:</strong> ${esc(insight.affected_ips.slice(0, 3).join(', '))}${insight.affected_ips.length > 3 ? '...' : ''}</div>` : ''}
+          ${insight.affected_paths.length ? `<div><strong style="color:var(--text-light)">Paths:</strong> ${esc(insight.affected_paths.slice(0, 2).join(', '))}${insight.affected_paths.length > 2 ? '...' : ''}</div>` : ''}
           <div><strong style="color:var(--text-light)">Events:</strong> ${insight.event_count}</div>
         </div>
         
@@ -280,7 +280,7 @@ function renderInsights(insights, summary) {
       </div>
     </div>`;
   });
-  
+
   html += `</div>`;
   container.innerHTML = html;
   toggleBulkBlockBtn();
@@ -288,39 +288,39 @@ function renderInsights(insights, summary) {
 
 let currentActionContext = { insightId: null, actionType: null, lang: 'nginx' };
 
-window.switchConfigLang = function(lang) {
-   currentActionContext.lang = lang;
-   ['nginx', 'apache', 'modsec', 'iptables'].forEach(l => {
-      const el = document.getElementById('lang-' + l);
-      if (el) el.className = (l === lang) ? 'pill' : 'pill neutral';
-   });
-   
-   const applyBtn = document.getElementById('actionModalApplyBtn');
-   if (applyBtn) {
-       applyBtn.style.display = (lang === 'modsec') ? 'inline-block' : 'none';
-   }
-   
-   if (currentActionContext.insightId) {
-      generateActionConfig();
-   }
+window.switchConfigLang = function (lang) {
+  currentActionContext.lang = lang;
+  ['nginx', 'apache', 'modsec', 'iptables'].forEach(l => {
+    const el = document.getElementById('lang-' + l);
+    if (el) el.className = (l === lang) ? 'pill' : 'pill neutral';
+  });
+
+  const applyBtn = document.getElementById('actionModalApplyBtn');
+  if (applyBtn) {
+    applyBtn.style.display = (lang === 'modsec') ? 'inline-block' : 'none';
+  }
+
+  if (currentActionContext.insightId) {
+    generateActionConfig();
+  }
 };
 
-window.openActionModal = function(insightId, actionType) {
+window.openActionModal = function (insightId, actionType) {
   const insight = (window.currentInsights || []).find(i => i.id === insightId);
   if (!insight) return;
-  
+
   document.getElementById('actionModalTitle').textContent = `Review Action: ${insight.title}`;
-  
+
   currentActionContext = { insightId, actionType, lang: 'nginx' };
   switchConfigLang('nginx');
-  
+
   const resolveBtn = document.getElementById('actionModalResolveBtn');
   resolveBtn.onclick = () => window.markResolved(insightId);
-  
+
   document.getElementById('actionModal').style.display = 'flex';
 };
 
-window.generateActionConfig = function() {
+window.generateActionConfig = function () {
   const { insightId, actionType, lang } = currentActionContext;
   const insight = (window.currentInsights || []).find(i => i.id === insightId);
   if (!insight) return;
@@ -330,134 +330,134 @@ window.generateActionConfig = function() {
   const paths = insight.affected_paths || [];
 
   if (actionType === 'block') {
-      if (lang === 'nginx') {
-          if (insight.type === 'brute_force') {
-              config = `# Nginx Rate Limiting\nlimit_req_zone $binary_remote_addr zone=auth_limit:10m rate=5r/m;\n\nlocation ${paths[0] || '/'} {\n    limit_req zone=auth_limit burst=10 nodelay;\n}`;
-          } else {
-              config = `# Nginx Deny\n`;
-              if (ips.length) {
-                  ips.forEach(ip => config += `deny ${ip};\n`);
-              } else {
-                  config += `# No specific IPs specified to block.\n`;
-              }
-          }
-      } else if (lang === 'apache') {
-          if (ips.length) {
-              config = `<RequireAll>\n    Require all granted\n`;
-              ips.forEach(ip => config += `    Require not ip ${ip}\n`);
-              config += `</RequireAll>`;
-          } else {
-              config = `# No specific IPs specified to block.`;
-          }
-      } else if (lang === 'iptables') {
-          if (ips.length) {
-              config = `# iptables Block\n`;
-              ips.forEach(ip => config += `iptables -A INPUT -s ${ip} -j DROP\n`);
-          } else {
-              config = `# No specific IPs specified to block.`;
-          }
-      } else if (lang === 'modsec') {
-          config = `# ModSecurity IP Block Rule\n`;
-          if (ips.length) {
-              config += `SecRule REMOTE_ADDR "@pm ${ips.join(' ')}" \\\n  "id:10005,phase:1,deny,status:403,msg:'Blocked Malicious IP'"`;
-          } else {
-              config += `# No specific IPs specified to block.`;
-          }
-      }
-  } else if (actionType === 'whitelist') {
-      if (lang === 'nginx') {
-          config = `location ${paths[0] || '/'} {\n    modsecurity off;\n    allow all;\n}`;
-      } else if (lang === 'apache') {
-          config = `<Location ${paths[0] || '/'}>\n    SecRuleEngine Off\n</Location>`;
-      } else if (lang === 'modsec') {
-          const rules = insight.affected_rules || [];
-          if (rules.length) {
-              config = `# Whitelist path for specific rules\n`;
-              config += `SecRule REQUEST_URI "@beginsWith ${paths[0] || '/'}" \\\n  "id:10001,phase:1,pass,nolog,ctl:ruleRemoveById=${rules.join(',')}"`;
-          } else {
-              config = `# Disable ModSec engine for path\nSecRule REQUEST_URI "@beginsWith ${paths[0] || '/'}" \\\n  "id:10001,phase:1,pass,nolog,ctl:ruleEngine=Off"`;
-          }
-      } else if (lang === 'iptables') {
-          config = `# iptables cannot whitelist HTTP paths.\n# Please use Nginx, Apache, or ModSecurity.`;
-      }
-  } else if (actionType === 'rule') {
-      if (lang === 'modsec') {
-          if (insight.type === 'new_attack_pattern') {
-              config = `SecRule REQUEST_URI "@contains ${paths[0] || '/'}" \\\n  "id:10002,phase:2,block,t:none,t:lowercase,msg:'Custom rule blocking new attack pattern',logdata:'%{MATCHED_VAR}',tag:'custom_rule',severity:'CRITICAL',setvar:'tx.anomaly_score=+%{tx.critical_anomaly_score}'"`;
-          } else {
-              config = `SecRule REQUEST_HEADERS:User-Agent "@contains BadBot" \\\n  "id:10003,phase:1,deny,status:403,msg:'Blocked Custom Bot'"`;
-          }
+    if (lang === 'nginx') {
+      if (insight.type === 'brute_force') {
+        config = `# Nginx Rate Limiting\nlimit_req_zone $binary_remote_addr zone=auth_limit:10m rate=5r/m;\n\nlocation ${paths[0] || '/'} {\n    limit_req zone=auth_limit burst=10 nodelay;\n}`;
       } else {
-          config = `# Custom rules are best implemented in ModSecurity.\n# Select ModSecurity from the language switcher.`;
+        config = `# Nginx Deny\n`;
+        if (ips.length) {
+          ips.forEach(ip => config += `deny ${ip};\n`);
+        } else {
+          config += `# No specific IPs specified to block.\n`;
+        }
       }
+    } else if (lang === 'apache') {
+      if (ips.length) {
+        config = `<RequireAll>\n    Require all granted\n`;
+        ips.forEach(ip => config += `    Require not ip ${ip}\n`);
+        config += `</RequireAll>`;
+      } else {
+        config = `# No specific IPs specified to block.`;
+      }
+    } else if (lang === 'iptables') {
+      if (ips.length) {
+        config = `# iptables Block\n`;
+        ips.forEach(ip => config += `iptables -A INPUT -s ${ip} -j DROP\n`);
+      } else {
+        config = `# No specific IPs specified to block.`;
+      }
+    } else if (lang === 'modsec') {
+      config = `# ModSecurity IP Block Rule\n`;
+      if (ips.length) {
+        config += `SecRule REMOTE_ADDR "@pm ${ips.join(' ')}" \\\n  "id:10005,phase:1,deny,status:403,msg:'Blocked Malicious IP'"`;
+      } else {
+        config += `# No specific IPs specified to block.`;
+      }
+    }
+  } else if (actionType === 'whitelist') {
+    if (lang === 'nginx') {
+      config = `location ${paths[0] || '/'} {\n    modsecurity off;\n    allow all;\n}`;
+    } else if (lang === 'apache') {
+      config = `<Location ${paths[0] || '/'}>\n    SecRuleEngine Off\n</Location>`;
+    } else if (lang === 'modsec') {
+      const rules = insight.affected_rules || [];
+      if (rules.length) {
+        config = `# Whitelist path for specific rules\n`;
+        config += `SecRule REQUEST_URI "@beginsWith ${paths[0] || '/'}" \\\n  "id:10001,phase:1,pass,nolog,ctl:ruleRemoveById=${rules.join(',')}"`;
+      } else {
+        config = `# Disable ModSec engine for path\nSecRule REQUEST_URI "@beginsWith ${paths[0] || '/'}" \\\n  "id:10001,phase:1,pass,nolog,ctl:ruleEngine=Off"`;
+      }
+    } else if (lang === 'iptables') {
+      config = `# iptables cannot whitelist HTTP paths.\n# Please use Nginx, Apache, or ModSecurity.`;
+    }
+  } else if (actionType === 'rule') {
+    if (lang === 'modsec') {
+      if (insight.type === 'new_attack_pattern') {
+        config = `SecRule REQUEST_URI "@contains ${paths[0] || '/'}" \\\n  "id:10002,phase:2,block,t:none,t:lowercase,msg:'Custom rule blocking new attack pattern',logdata:'%{MATCHED_VAR}',tag:'custom_rule',severity:'CRITICAL',setvar:'tx.anomaly_score=+%{tx.critical_anomaly_score}'"`;
+      } else {
+        config = `SecRule REQUEST_HEADERS:User-Agent "@contains BadBot" \\\n  "id:10003,phase:1,deny,status:403,msg:'Blocked Custom Bot'"`;
+      }
+    } else {
+      config = `# Custom rules are best implemented in ModSecurity.\n# Select ModSecurity from the language switcher.`;
+    }
   }
 
   document.getElementById('actionModalConfig').textContent = config;
 };
 
-window.closeActionModal = function() {
+window.closeActionModal = function () {
   document.getElementById('actionModal').style.display = 'none';
 };
 
-window.copyActionText = function() {
+window.copyActionText = function () {
   const text = document.getElementById('actionModalConfig').textContent;
   navigator.clipboard.writeText(text).then(() => {
     showToast('Config copied to clipboard!', 'success');
   });
 };
 
-window.markResolved = function(insightId) {
+window.markResolved = function (insightId) {
   closeActionModal();
   dismissInsight(insightId, true);
 };
 
-window.applyActionLive = function() {
-    const configText = document.getElementById('actionModalConfig').textContent;
-    if (!configText || !configText.includes('SecRule')) {
-        return showToast('Only ModSecurity rules can be applied live directly from the dashboard.', 'error');
-    }
-    
-    const btn = document.getElementById('actionModalApplyBtn');
-    const ogText = btn.textContent;
-    btn.textContent = 'Applying...';
-    btn.disabled = true;
-    
-    const payload = new URLSearchParams();
-    payload.append('action', 'add_custom_rule');
-    payload.append('raw_text', configText);
-    
-    fetch('/api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: payload
-    })
+window.applyActionLive = function () {
+  const configText = document.getElementById('actionModalConfig').textContent;
+  if (!configText || !configText.includes('SecRule')) {
+    return showToast('Only ModSecurity rules can be applied live directly from the dashboard.', 'error');
+  }
+
+  const btn = document.getElementById('actionModalApplyBtn');
+  const ogText = btn.textContent;
+  btn.textContent = 'Applying...';
+  btn.disabled = true;
+
+  const payload = new URLSearchParams();
+  payload.append('action', 'add_custom_rule');
+  payload.append('raw_text', configText);
+
+  fetch('/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: payload
+  })
     .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            showToast('Action applied successfully!', 'success');
-            if (currentActionContext.insightId) {
-                window.markResolved(currentActionContext.insightId);
-            } else {
-                closeActionModal();
-            }
-            if (typeof loadRuleExplorer === 'function') loadRuleExplorer();
+      if (data.success) {
+        showToast('Action applied successfully!', 'success');
+        if (currentActionContext.insightId) {
+          window.markResolved(currentActionContext.insightId);
         } else {
-            showToast(data.error || 'Failed to apply rule', 'error');
+          closeActionModal();
         }
+        if (typeof loadRuleExplorer === 'function') loadRuleExplorer();
+      } else {
+        showToast(data.error || 'Failed to apply rule', 'error');
+      }
     })
     .catch(err => showToast('Network error', 'error'))
     .finally(() => {
-        btn.textContent = ogText;
-        btn.disabled = false;
+      btn.textContent = ogText;
+      btn.disabled = false;
     });
 };
 
-window.dismissInsight = function(id, reload = true) {
+window.dismissInsight = function (id, reload = true) {
   if (!id) return Promise.resolve();
-  
+
   const idArray = (typeof id === 'string' ? id.split(',') : [id]).map(s => String(s).trim()).filter(Boolean);
   const idSet = new Set(idArray);
-  
+
   if (window.currentInsights) {
     window.currentInsights = window.currentInsights.filter(i => !idSet.has(i.id));
     const openCount = window.currentInsights.filter(i => i.severity >= 3).length;
@@ -468,20 +468,20 @@ window.dismissInsight = function(id, reload = true) {
       needs_action: openCount
     });
   }
-  
+
   return fetch('/api', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: 'action=dismiss_insight&insight_id=' + encodeURIComponent(id)
   }).then(res => res.json()).then(data => {
     if (data.success && reload) {
-      fetchData(); 
+      fetchData();
     }
     return data;
   });
 };
 
-window.onInsightChkChange = function(chk) {
+window.onInsightChkChange = function (chk) {
   const row = chk.closest('.insight-row');
   if (row) {
     if (chk.checked) row.classList.add('selected');
@@ -490,7 +490,7 @@ window.onInsightChkChange = function(chk) {
   toggleBulkBlockBtn();
 };
 
-window.selectAllInsights = function() {
+window.selectAllInsights = function () {
   document.querySelectorAll('.insight-chk').forEach(chk => {
     chk.checked = true;
     const row = chk.closest('.insight-row');
@@ -499,7 +499,7 @@ window.selectAllInsights = function() {
   toggleBulkBlockBtn();
 };
 
-window.deselectAllInsights = function() {
+window.deselectAllInsights = function () {
   document.querySelectorAll('.insight-chk').forEach(chk => {
     chk.checked = false;
     const row = chk.closest('.insight-row');
@@ -508,29 +508,29 @@ window.deselectAllInsights = function() {
   toggleBulkBlockBtn();
 };
 
-window.openInsightDetail = function(insightId) {
+window.openInsightDetail = function (insightId) {
   const insight = (window.currentInsights || []).find(i => i.id === insightId);
   if (!insight) return;
-  
+
   const modal = document.getElementById('detailModal');
   const modalBody = document.getElementById('modalBody');
   if (!modal || !modalBody) return;
-  
+
   const title = modal.querySelector('h3');
   if (title) title.textContent = 'Insight Details';
-  
+
   const esc = (str) => {
     if (!str) return '';
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
   };
-  
+
   let html = `<div style="margin-bottom:16px;">
     <h4 style="margin:0 0 8px 0; color:var(--text-strong)">${esc(insight.title)}</h4>
     <p style="color:var(--muted); font-size:13px; line-height:1.5;">${esc(insight.description)}</p>
   </div>`;
-  
+
   if (insight.affected_ips && insight.affected_ips.length > 0) {
     html += `<div style="margin-bottom:12px;">
       <strong style="display:block; margin-bottom:4px; font-size:12px; color:var(--text-light)">Affected IPs:</strong>
@@ -539,7 +539,7 @@ window.openInsightDetail = function(insightId) {
       </div>
     </div>`;
   }
-  
+
   if (insight.affected_paths && insight.affected_paths.length > 0) {
     html += `<div style="margin-bottom:12px;">
       <strong style="display:block; margin-bottom:4px; font-size:12px; color:var(--text-light)">Affected Paths:</strong>
@@ -548,74 +548,74 @@ window.openInsightDetail = function(insightId) {
       </div>
     </div>`;
   }
-  
+
   if (insight.recommendation) {
     html += `<div style="margin-bottom:12px; padding:8px 12px; background:var(--panel-2); border-left:3px solid var(--accent); border-radius:4px; font-size:12px;">
       <strong style="color:var(--accent)">Recommendation:</strong> ${esc(insight.recommendation)}
     </div>`;
   }
-  
+
   modalBody.innerHTML = html;
   modal.style.display = 'flex';
 };
 
-window.toggleBulkBlockBtn = function() {
-    const total = document.querySelectorAll('.insight-chk').length;
-    const checked = document.querySelectorAll('.insight-chk:checked');
-    const bulkBtn = document.getElementById('bulkBlockBtn');
-    const bulkDismissBtn = document.getElementById('bulkDismissBtn');
-    const selectAllBtn = document.getElementById('selectAllBtn');
-    const deselectAllBtn = document.getElementById('deselectAllBtn');
+window.toggleBulkBlockBtn = function () {
+  const total = document.querySelectorAll('.insight-chk').length;
+  const checked = document.querySelectorAll('.insight-chk:checked');
+  const bulkBtn = document.getElementById('bulkBlockBtn');
+  const bulkDismissBtn = document.getElementById('bulkDismissBtn');
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  const deselectAllBtn = document.getElementById('deselectAllBtn');
 
-    if (bulkBtn) {
-      bulkBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
-      bulkBtn.textContent = checked.length > 1 ? `Block Selected (${checked.length})` : 'Block Selected';
-    }
-    if (bulkDismissBtn) {
-      bulkDismissBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
-      bulkDismissBtn.textContent = checked.length > 1 ? `Dismiss Selected (${checked.length})` : 'Dismiss Selected';
-    }
-    if (selectAllBtn) {
-      selectAllBtn.style.display = (total > 0 && checked.length < total) ? 'inline-flex' : 'none';
-    }
-    if (deselectAllBtn) {
-      deselectAllBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
-    }
+  if (bulkBtn) {
+    bulkBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
+    bulkBtn.textContent = checked.length > 1 ? `Block Selected (${checked.length})` : 'Block Selected';
+  }
+  if (bulkDismissBtn) {
+    bulkDismissBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
+    bulkDismissBtn.textContent = checked.length > 1 ? `Dismiss Selected (${checked.length})` : 'Dismiss Selected';
+  }
+  if (selectAllBtn) {
+    selectAllBtn.style.display = (total > 0 && checked.length < total) ? 'inline-flex' : 'none';
+  }
+  if (deselectAllBtn) {
+    deselectAllBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
+  }
 };
 
-window.bulkBlockSelected = function() {
-    const checked = Array.from(document.querySelectorAll('.insight-chk:checked')).map(cb => cb.value);
-    if (checked.length === 0) return;
-    
-    let allIps = new Set();
-    checked.forEach(id => {
-        const insight = window.currentInsights.find(i => i.id === id);
-        if (insight && insight.affected_ips) {
-            insight.affected_ips.forEach(ip => allIps.add(ip));
-        }
-    });
-    
-    const mockInsight = {
-        id: checked.join(','), 
-        title: `Bulk Block (${checked.length} selected insights)`,
-        type: 'bulk',
-        affected_ips: Array.from(allIps),
-        affected_paths: []
-    };
-    
-    window.currentInsights.push(mockInsight);
-    openActionModal(mockInsight.id, 'block');
+window.bulkBlockSelected = function () {
+  const checked = Array.from(document.querySelectorAll('.insight-chk:checked')).map(cb => cb.value);
+  if (checked.length === 0) return;
+
+  let allIps = new Set();
+  checked.forEach(id => {
+    const insight = window.currentInsights.find(i => i.id === id);
+    if (insight && insight.affected_ips) {
+      insight.affected_ips.forEach(ip => allIps.add(ip));
+    }
+  });
+
+  const mockInsight = {
+    id: checked.join(','),
+    title: `Bulk Block (${checked.length} selected insights)`,
+    type: 'bulk',
+    affected_ips: Array.from(allIps),
+    affected_paths: []
+  };
+
+  window.currentInsights.push(mockInsight);
+  openActionModal(mockInsight.id, 'block');
 };
 
-window.bulkDismissSelected = function() {
-    const checked = Array.from(document.querySelectorAll('.insight-chk:checked')).map(cb => cb.value);
-    if (checked.length === 0) return;
-    
-    if (!confirm(`Are you sure you want to dismiss ${checked.length} selected insights?`)) return;
-    
-    dismissInsight(checked.join(','), true)
-      .then(() => showToast(`Dismissed ${checked.length} insights`, 'success'))
-      .catch(() => showToast('Error dismissing insights', 'error'));
+window.bulkDismissSelected = function () {
+  const checked = Array.from(document.querySelectorAll('.insight-chk:checked')).map(cb => cb.value);
+  if (checked.length === 0) return;
+
+  if (!confirm(`Are you sure you want to dismiss ${checked.length} selected insights?`)) return;
+
+  dismissInsight(checked.join(','), true)
+    .then(() => showToast(`Dismissed ${checked.length} insights`, 'success'))
+    .catch(() => showToast('Error dismissing insights', 'error'));
 };
 
 function renderThreatActors(rep, topIps) {
@@ -648,7 +648,7 @@ function renderTopBotIps(ips) {
     panel.innerHTML = '<div class="notice" style="padding:16px;">No bot IPs detected.</div>';
     return;
   }
-  
+
   const classNames = {
     'human': 'Human',
     'verified_bot': 'Verified Bot',
@@ -670,10 +670,10 @@ function renderTopBotIps(ips) {
         score = data.score;
         type = data.class || 'unknown';
       }
-      
+
       const typeLabel = classNames[type] || type;
       const typeColor = classColors[type] || 'neutral';
-      
+
       return `<tr><td class="mono">${esc(ip)}</td><td><span class="pill ${score >= 60 ? 'crit' : 'warn'}">${score}</span></td><td><span class="pill ${typeColor}">${esc(typeLabel)}</span></td></tr>`;
     }).join('') + '</tbody></table>';
 }
@@ -687,7 +687,7 @@ function renderAiAgents(agents) {
   }
   const recent = agents.slice(0, 10);
   panel.innerHTML = `<table><thead><tr><th>Time</th><th>User Agent</th></tr></thead><tbody>` +
-    recent.map(a => `<tr><td style="white-space:nowrap">${timeAgo(a.event_time)}</td><td title="${esc(a.user_agent)}">${esc((a.user_agent||'').slice(0,40))}${a.user_agent?.length>40?'...':''}</td></tr>`).join('') + '</tbody></table>';
+    recent.map(a => `<tr><td style="white-space:nowrap">${timeAgo(a.event_time)}</td><td title="${esc(a.user_agent)}">${esc((a.user_agent || '').slice(0, 40))}${a.user_agent?.length > 40 ? '...' : ''}</td></tr>`).join('') + '</tbody></table>';
 }
 
 function renderEvents(events, total) {
@@ -696,13 +696,13 @@ function renderEvents(events, total) {
   const btnWrap = document.getElementById('eventsShowMoreWrap');
   if (!events || !events.length) {
     container.innerHTML = '<div class="notice">No ModSecurity events match your filters. Try adjusting the time range or clearing filters.</div>';
-    if(btnWrap) btnWrap.style.display = 'none';
+    if (btnWrap) btnWrap.style.display = 'none';
     return;
   }
 
   const sevColor = s => ({
-    CRITICAL: '#f85149', ERROR: '#ff8a3d', WARNING: '#e3b341', NOTICE: '#58a6ff'
-  }[s?.toUpperCase()] || '#8b949e');
+    CRITICAL: '#f43f5e', ERROR: '#f97316', WARNING: '#f59e0b', NOTICE: '#3b82f6'
+  }[s?.toUpperCase()] || '#94a3b8');
 
   const visibleEvents = events.slice(0, eventsVisibleLimit);
 
@@ -710,25 +710,51 @@ function renderEvents(events, total) {
     let rules = [];
     try {
       rules = Array.isArray(e.rules) ? e.rules : (typeof e.rules === 'string' ? JSON.parse(e.rules || '[]') : []);
-    } catch(x) {}
+    } catch (x) { }
     const isBlocked = !!e.blocked;
-    return `<div class="tl-item ${isBlocked ? 'blocked' : ''}" onclick="openEventDetail(${idx})">
-      <div class="tl-status">
-        <span class="pill ${isBlocked ? 'crit' : 'ok'}">${isBlocked ? 'BLOCKED' : 'PASSED'}</span>
-        <span class="pill neutral">${esc(e.server || '?')}</span>
-        <span class="tl-time">${fmtTime(e.event_time)}<br><span style="opacity:0.7">${timeAgo(e.event_time)}</span></span>
+
+    // Parse method and path from request_line (e.g., "GET /test?x=1 HTTP/1.1")
+    let method = 'GET';
+    let path = e.request_line || '/';
+    if (e.request_line && e.request_line.includes(' ')) {
+      const parts = e.request_line.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        method = parts[0].toUpperCase();
+        path = parts.slice(1, parts.length > 2 ? -1 : undefined).join(' ');
+      }
+    }
+    const methodCls = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS', 'PATCH'].includes(method) ? method.toLowerCase() : 'other';
+
+    return `<div class="tl-item ${isBlocked ? 'blocked' : 'passed'}" onclick="openEventDetail(${idx})" title="Click to inspect full security telemetry">
+      <div class="tl-decision-col">
+        <span class="soc-decision-badge ${isBlocked ? 'blocked' : 'passed'}">
+          ${isBlocked 
+            ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> BLOCKED' 
+            : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> PASSED'}
+        </span>
+        <span class="tl-time-utc">${fmtTime(e.event_time)}</span>
+        <span class="tl-time-rel">${timeAgo(e.event_time)}</span>
       </div>
       <div class="tl-body">
-        <div class="req">${esc(e.request_line || '')}</div>
-        <div class="meta-row">
-          <span>IP: ${esc(e.client_ip || '?')}</span>
-          ${e.http_status ? `<span>Status: ${esc(e.http_status)}</span>` : ''}
-          <span>${rules.length} rule${rules.length === 1 ? '' : 's'} matched</span>
-          ${e.user_agent ? `<span title="${esc(e.user_agent)}">UA: ${esc(e.user_agent.slice(0, 40))}${e.user_agent.length > 40 ? '...' : ''}</span>` : ''}
+        <div class="tl-req-line">
+          <span class="method-tag method-${methodCls}">${esc(method)}</span>
+          <span class="req-path" title="${esc(path)}">${esc(path)}</span>
+          ${e.http_status ? `<span class="http-status-code status-${String(e.http_status)[0]}xx">${esc(e.http_status)}</span>` : ''}
         </div>
-        ${rules.length ? `<div class="rules">${rules.map(r =>
-          `<span class="rule-tag"><span class="sev-dot" style="background:${sevColor(r.severity)}"></span>#${esc(r.id || '?')} ${esc(r.msg || '')}</span>`
-        ).join('')}</div>` : ''}
+        <div class="meta-row">
+          <span class="meta-item"><span class="meta-key">SRC IP:</span> <span class="mono-val">${esc(e.client_ip || '?')}</span></span>
+          <span class="meta-item"><span class="meta-key">ENGINE:</span> <span class="mono-val">${esc(e.server || 'apache')}</span></span>
+          <span class="meta-item"><span class="meta-key">RULES:</span> <span class="mono-val">${rules.length} matched</span></span>
+          ${e.user_agent ? `<span class="meta-item ua-meta" title="${esc(e.user_agent)}"><span class="meta-key">UA:</span> <span class="mono-val">${esc(e.user_agent.slice(0, 45))}${e.user_agent.length > 45 ? '...' : ''}</span></span>` : ''}
+        </div>
+        ${rules.length ? `<div class="rules-chips">${rules.map(r => {
+          const sev = (r.severity || 'NOTICE').toUpperCase();
+          return `<span class="soc-rule-chip sev-${sev.toLowerCase()}" title="${esc(r.msg || '')}">
+            <span class="sev-dot" style="background:${sevColor(sev)}"></span>
+            <strong class="rule-id">#${esc(r.id || '?')}</strong>
+            <span class="rule-msg">${esc(r.msg || 'Rule triggered')}</span>
+          </span>`;
+        }).join('')}</div>` : ''}
       </div>
     </div>`;
   }).join('') + '</div>';
@@ -754,7 +780,7 @@ function renderAccessLogs(rows) {
       const s = r.http_status || '';
       const sClass = s ? (s[0] === '2' ? 'ok' : s[0] === '3' ? 'warn' : 'crit') : 'neutral';
       return `<tr onclick="openAccessLogDetail(${idx})" title="Click to view details">
-        <td><span class="pill ${esc(r.server || '')==='nginx'?'ok':'crit'}">${esc(r.server || '?')}</span></td>
+        <td><span class="pill ${esc(r.server || '') === 'nginx' ? 'ok' : 'crit'}">${esc(r.server || '?')}</span></td>
         <td>${esc(r.ip || '')}</td>
         <td>${esc(r.log_time || '')}</td>
         <td class="req-cell" title="${esc(r.request || '')}">${esc(r.request || '')}</td>
@@ -825,7 +851,7 @@ function renderGeoMap(markers, countries) {
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: true,
       zoomToBoundsOnClick: true,
-      iconCreateFunction: function(cluster) {
+      iconCreateFunction: function (cluster) {
         const count = cluster.getChildCount();
         let size = 'small';
         let radius = 30;
@@ -925,7 +951,7 @@ function renderGeoMap(markers, countries) {
       closeButton: true,
     });
 
-    marker.on('mouseover', function() { this.openPopup(); });
+    marker.on('mouseover', function () { this.openPopup(); });
 
     markerClusterGroup.addLayer(marker);
 
@@ -1045,14 +1071,14 @@ function countryFlag(code) {
 }
 
 /* ---------- Modal ---------- */
-window.openEventDetail = function(idx) {
+window.openEventDetail = function (idx) {
   const e = window._events?.[idx];
   if (!e) return;
 
   let rules = [];
   try {
     rules = Array.isArray(e.rules) ? e.rules : (typeof e.rules === 'string' ? JSON.parse(e.rules || '[]') : []);
-  } catch(x) {}
+  } catch (x) { }
 
   const sevColor = s => ({
     CRITICAL: '#f85149', ERROR: '#ff8a3d', WARNING: '#e3b341', NOTICE: '#58a6ff'
@@ -1100,7 +1126,7 @@ window.openEventDetail = function(idx) {
   document.getElementById('detailModal').classList.add('open');
 };
 
-window.openAccessLogDetail = function(idx) {
+window.openAccessLogDetail = function (idx) {
   const r = window._accessRows?.[idx];
   if (!r) return;
 
@@ -1126,7 +1152,7 @@ window.openAccessLogDetail = function(idx) {
   document.getElementById('detailModal').classList.add('open');
 };
 
-window.openInsightDetail = function(insightId) {
+window.openInsightDetail = function (insightId) {
   const insight = (window.currentInsights || []).find(i => i.id === insightId);
   if (!insight) return;
 
@@ -1143,9 +1169,9 @@ window.openInsightDetail = function(insightId) {
         <label style="color:var(--muted);font-size:.75em;text-transform:uppercase;font-weight:600;">Triggered WAF Events (${matchingEvents.length})</label>
         <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px; max-height:220px; overflow-y:auto;">
           ${matchingEvents.map((e) => {
-            const isBlocked = !!e.blocked;
-            const originalIndex = (window._events || []).indexOf(e);
-            return `
+      const isBlocked = !!e.blocked;
+      const originalIndex = (window._events || []).indexOf(e);
+      return `
               <div style="padding:10px 12px; background:var(--panel-2); border:1px solid var(--border); border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="openEventDetail(${originalIndex})">
                 <div>
                   <div style="font-family:monospace; font-size:12px; font-weight:600; color:var(--text-strong);">${esc(e.request_line || '')}</div>
@@ -1153,7 +1179,7 @@ window.openInsightDetail = function(insightId) {
                 </div>
                 <span class="pill ${isBlocked ? 'crit' : 'ok'}">${isBlocked ? 'BLOCKED' : 'PASSED'}</span>
               </div>`;
-          }).join('')}
+    }).join('')}
         </div>
       </div>`;
   }
@@ -1229,7 +1255,7 @@ function loadPreferences() {
       const el = form.querySelector('[name="' + k + '"]');
       if (el) el.value = v;
     }
-  } catch(e) {}
+  } catch (e) { }
 }
 
 /* ---------- Auto Refresh ---------- */
@@ -1268,7 +1294,7 @@ async function startHealthCheck() {
       });
       const d = await res.json();
       updateHealth(d.ok, d.latency);
-    } catch(e) { updateHealth(false, 0); }
+    } catch (e) { updateHealth(false, 0); }
   };
   check();
   setInterval(check, 30000);
@@ -1276,7 +1302,7 @@ async function startHealthCheck() {
 
 function updateHealth(ok, latency) {
   const pill = document.getElementById('healthPill');
-  const txt  = document.getElementById('healthText');
+  const txt = document.getElementById('healthText');
   if (ok) {
     pill.classList.remove('error');
     txt.textContent = 'Healthy (' + latency + 'ms)';
@@ -1325,7 +1351,7 @@ async function exportCSV() {
     a.click();
     URL.revokeObjectURL(url);
     showToast('CSV exported successfully', 'info');
-  } catch(e) {
+  } catch (e) {
     showToast('Export error: ' + e.message, 'error');
   }
 }
@@ -1350,9 +1376,9 @@ function fmtTime(iso) {
 function timeAgo(iso) {
   if (!iso) return '--';
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60)   return diff + 's ago';
+  if (diff < 60) return diff + 's ago';
   if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-  if (diff < 86400)return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
   return Math.floor(diff / 86400) + 'd ago';
 }
 
@@ -1408,12 +1434,12 @@ function updateStatValue(id, newValue) {
   }
 }
 
-window.toggleSidebar = function() {
+window.toggleSidebar = function () {
   const sidebar = document.getElementById('sidebar');
   if (sidebar) sidebar.classList.toggle('mobile-open');
 }
 
-window.showMoreEvents = function() {
+window.showMoreEvents = function () {
   eventsVisibleLimit += 20;
   if (window._events) {
     const totalEl = document.getElementById('stTotal');
@@ -1425,14 +1451,14 @@ window.showMoreEvents = function() {
 // --- CRS Rule Explorer ---
 let allCrsRules = [];
 
-window.openRuleModal = function() {
+window.openRuleModal = function () {
   document.getElementById('ruleModal').classList.add('open');
   document.getElementById('ruleTerminalWrapper').style.display = 'block';
   document.getElementById('ruleTerminalOutput').textContent = '> WAF Admin Console Ready.\n> Waiting for commands...\n';
   loadRuleExplorer();
 };
 
-window.closeRuleModal = function() {
+window.closeRuleModal = function () {
   document.getElementById('ruleModal').classList.remove('open');
   document.getElementById('addRuleRaw').value = '';
   const searchInput = document.getElementById('ruleSearchInput');
@@ -1443,102 +1469,102 @@ window.closeRuleModal = function() {
   if (document.getElementById('ruleSortFilter')) document.getElementById('ruleSortFilter').value = 'default';
 };
 
-window.refreshRulesList = function(btnElement) {
+window.refreshRulesList = function (btnElement) {
   const origText = btnElement ? btnElement.innerHTML : '🔄 Refresh Rules';
   if (btnElement) {
-      btnElement.disabled = true;
-      btnElement.innerHTML = '🔄 Loading...';
+    btnElement.disabled = true;
+    btnElement.innerHTML = '🔄 Loading...';
   }
-  
+
   fetch('/api', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'action=get_all_rules'
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'action=get_all_rules'
   }).then(r => r.json()).then(data => {
-      if(data.success && data.data) {
-          allCrsRules = data.data;
-          renderRuleExplorer();
-          showToast('Rule list refreshed');
-      } else {
-          showToast('Failed to refresh rules', 'error');
-      }
+    if (data.success && data.data) {
+      allCrsRules = data.data;
+      renderRuleExplorer();
+      showToast('Rule list refreshed');
+    } else {
+      showToast('Failed to refresh rules', 'error');
+    }
   }).catch(e => {
-      console.error(e);
-      showToast('Error refreshing rules', 'error');
+    console.error(e);
+    showToast('Error refreshing rules', 'error');
   }).finally(() => {
-      if (btnElement) {
-          btnElement.disabled = false;
-          btnElement.innerHTML = origText;
-      }
+    if (btnElement) {
+      btnElement.disabled = false;
+      btnElement.innerHTML = origText;
+    }
   });
 };
 
-window.loadRuleExplorer = function() {
+window.loadRuleExplorer = function () {
   const listEl = document.getElementById('ruleExplorerList');
   listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">Loading rules from upstream...</div>';
-  
+
   // Also check CRS version status when modal opens
   checkCrsStatus();
 
   fetch('/api', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'action=get_all_rules'
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'action=get_all_rules'
   }).then(r => r.json()).then(data => {
-      if(data.success && data.data) {
-          allCrsRules = data.data;
-          renderRuleExplorer();
-      } else {
-          listEl.innerHTML = '<div style="padding:16px; color:var(--warn); font-size:12px;">Failed to load rules.</div>';
-      }
+    if (data.success && data.data) {
+      allCrsRules = data.data;
+      renderRuleExplorer();
+    } else {
+      listEl.innerHTML = '<div style="padding:16px; color:var(--warn); font-size:12px;">Failed to load rules.</div>';
+    }
   }).catch(e => {
-      console.error(e);
-      listEl.innerHTML = '<div style="padding:16px; color:var(--warn); font-size:12px;">Error connecting to API.</div>';
+    console.error(e);
+    listEl.innerHTML = '<div style="padding:16px; color:var(--warn); font-size:12px;">Error connecting to API.</div>';
   });
 };
 
-window.checkCrsStatus = function() {
-    const btn = document.getElementById('crsUpdateBtn');
-    btn.textContent = 'Checking CRS version...';
-    btn.disabled = true;
+window.checkCrsStatus = function () {
+  const btn = document.getElementById('crsUpdateBtn');
+  btn.textContent = 'Checking CRS version...';
+  btn.disabled = true;
 
-    fetch('/api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'action=crs_status'
-    }).then(r => r.json()).then(data => {
-        if(data.success && data.data) {
-            const st = data.data;
-            if (st.up_to_date === 'false' || st.current !== st.latest) {
-                btn.textContent = 'Update to latest CRS';
-                btn.disabled = false;
-                btn.classList.add('primary');
-            } else {
-                btn.textContent = 'Your CRS is up to date';
-                btn.disabled = true;
-                btn.classList.remove('primary');
-                btn.style.opacity = '0.5';
-            }
-        }
-    }).catch(e => {
-        console.error('Error fetching CRS status:', e);
-        btn.textContent = 'Failed to check CRS version';
-    });
+  fetch('/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'action=crs_status'
+  }).then(r => r.json()).then(data => {
+    if (data.success && data.data) {
+      const st = data.data;
+      if (st.up_to_date === 'false' || st.current !== st.latest) {
+        btn.textContent = 'Update to latest CRS';
+        btn.disabled = false;
+        btn.classList.add('primary');
+      } else {
+        btn.textContent = 'Your CRS is up to date';
+        btn.disabled = true;
+        btn.classList.remove('primary');
+        btn.style.opacity = '0.5';
+      }
+    }
+  }).catch(e => {
+    console.error('Error fetching CRS status:', e);
+    btn.textContent = 'Failed to check CRS version';
+  });
 };
 
-window.filterRules = function() {
-    renderRuleExplorer();
+window.filterRules = function () {
+  renderRuleExplorer();
 };
 
-window.renderRuleExplorer = function() {
+window.renderRuleExplorer = function () {
   const listEl = document.getElementById('ruleExplorerList');
   listEl.innerHTML = '';
-  
+
   if (allCrsRules.length === 0) {
-      listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">No rules found.</div>';
-      return;
+    listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">No rules found.</div>';
+    return;
   }
-  
+
   const searchInput = document.getElementById('ruleSearchInput');
   const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
@@ -1548,256 +1574,256 @@ window.renderRuleExplorer = function() {
   const sortFilter = document.getElementById('ruleSortFilter') ? document.getElementById('ruleSortFilter').value : 'default';
 
   const filteredRules = allCrsRules.filter(r => {
-      // Search query
-      if (query) {
-          const matchId = r.id ? r.id.toString().toLowerCase().includes(query) : false;
-          const matchMsg = r.msg ? r.msg.toLowerCase().includes(query) : false;
-          if (!matchId && !matchMsg) return false;
-      }
+    // Search query
+    if (query) {
+      const matchId = r.id ? r.id.toString().toLowerCase().includes(query) : false;
+      const matchMsg = r.msg ? r.msg.toLowerCase().includes(query) : false;
+      if (!matchId && !matchMsg) return false;
+    }
 
-      // Status filter
-      if (statusFilter === 'active' && r.disabled) return false;
-      if (statusFilter === 'disabled' && !r.disabled) return false;
+    // Status filter
+    if (statusFilter === 'active' && r.disabled) return false;
+    if (statusFilter === 'disabled' && !r.disabled) return false;
 
-      // Type filter (custom vs crs)
-      const isCustom = r.is_custom || (r.file && (r.file.includes('REQUEST-948') || r.file.includes('local-rules.conf') || r.file.includes('custom')));
-      if (typeFilter === 'custom' && !isCustom) return false;
-      if (typeFilter === 'crs' && isCustom) return false;
+    // Type filter (custom vs crs)
+    const isCustom = r.is_custom || (r.file && (r.file.includes('REQUEST-948') || r.file.includes('local-rules.conf') || r.file.includes('custom')));
+    if (typeFilter === 'custom' && !isCustom) return false;
+    if (typeFilter === 'crs' && isCustom) return false;
 
-      // Frequency / Hit filter
-      if (hitFilter === 'frequent' && !r.hit) return false;
+    // Frequency / Hit filter
+    if (hitFilter === 'frequent' && !r.hit) return false;
 
-      return true;
+    return true;
   });
 
   // Apply sorting
   filteredRules.sort((a, b) => {
-      if (sortFilter === 'newest_edited') {
-          const aOrder = a.custom_order || 0;
-          const bOrder = b.custom_order || 0;
-          if (aOrder !== bOrder) return bOrder - aOrder;
-          if (a.hit !== b.hit) return a.hit ? -1 : 1;
-          return parseInt(a.id) - parseInt(b.id);
-      } else if (sortFilter === 'id_asc') {
-          return parseInt(a.id) - parseInt(b.id);
-      } else if (sortFilter === 'id_desc') {
-          return parseInt(b.id) - parseInt(a.id);
-      } else {
-          if (a.hit !== b.hit) return a.hit ? -1 : 1;
-          return parseInt(a.id) - parseInt(b.id);
-      }
+    if (sortFilter === 'newest_edited') {
+      const aOrder = a.custom_order || 0;
+      const bOrder = b.custom_order || 0;
+      if (aOrder !== bOrder) return bOrder - aOrder;
+      if (a.hit !== b.hit) return a.hit ? -1 : 1;
+      return parseInt(a.id) - parseInt(b.id);
+    } else if (sortFilter === 'id_asc') {
+      return parseInt(a.id) - parseInt(b.id);
+    } else if (sortFilter === 'id_desc') {
+      return parseInt(b.id) - parseInt(a.id);
+    } else {
+      if (a.hit !== b.hit) return a.hit ? -1 : 1;
+      return parseInt(a.id) - parseInt(b.id);
+    }
   });
 
   if (filteredRules.length === 0) {
-      listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">No matching rules found.</div>';
-      return;
+    listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">No matching rules found.</div>';
+    return;
   }
-  
+
   filteredRules.forEach(r => {
-      const row = document.createElement('div');
-      row.className = 'rule-row';
-      row.style.cssText = `position:relative; z-index:1; display:grid; grid-template-columns: 80px 1fr 140px; gap:8px; padding:10px 12px; border-bottom:1px solid #222; align-items:center; background: ${r.disabled ? 'rgba(255,255,255,0.02)' : (r.hit ? 'rgba(255,255,255,0.04)' : 'transparent')};`;
-      
-      const idCol = document.createElement('div');
-      idCol.style.cssText = `font-family:monospace; font-size:12px; color: ${r.disabled ? 'var(--muted)' : (r.hit ? 'var(--warn)' : 'var(--text)')}; font-weight:700; ${r.disabled ? 'opacity:0.6;' : ''}`;
-      idCol.innerHTML = `${r.id} ${r.disabled ? '<span style="font-size:10px; color:var(--muted); font-weight:normal;">(Off)</span>' : (r.hit ? '<span title="Triggered in events" style="color:var(--warn)">🔥</span>' : '')}`;
-      
-      const descCol = document.createElement('div');
-      descCol.style.cssText = `font-size:12px; color:${r.disabled ? 'var(--muted)' : 'var(--text)'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${r.disabled ? 'text-decoration:line-through; opacity:0.6;' : ''}`;
-      descCol.title = r.msg;
-      descCol.textContent = r.msg;
-      
-      const actCol = document.createElement('div');
-      actCol.style.cssText = 'text-align:right; display:flex; gap:6px; justify-content:flex-end; align-items:center;';
-      
-      const menuWrap = document.createElement('div');
-      menuWrap.className = 'rule-menu-wrap';
-      
-      const dotsBtn = document.createElement('button');
-      dotsBtn.className = 'rule-dots-btn';
-      dotsBtn.innerHTML = '&#8942;';
-      dotsBtn.title = 'Rule Actions';
-      dotsBtn.onclick = (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          const isShown = dropdown.classList.contains('show');
-          document.querySelectorAll('.rule-menu-dropdown').forEach(d => {
-              d.classList.remove('show');
-              const parentRow = d.closest('.rule-row');
-              if (parentRow) parentRow.style.zIndex = '1';
-          });
-          if (!isShown) {
-              dropdown.classList.add('show');
-              row.style.zIndex = '100';
-          }
-      };
-      
-      const dropdown = document.createElement('div');
-      dropdown.className = 'rule-menu-dropdown';
-      
-      // 1. Edit
-      const itemEdit = document.createElement('button');
-      itemEdit.className = 'rule-menu-item';
-      itemEdit.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit';
-      itemEdit.onclick = (e) => {
-          e.stopPropagation();
-          dropdown.classList.remove('show');
-          openEditRuleModal(r.id);
-      };
-      
-      // 2. Disable / Restore
-      const itemToggle = document.createElement('button');
-      itemToggle.className = 'rule-menu-item';
-      if (r.disabled) {
-          itemToggle.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> <span style="color:var(--ok)">Restore</span>';
-          itemToggle.onclick = (e) => {
-              e.stopPropagation();
-              dropdown.classList.remove('show');
-              submitRuleAction('restore_rule', e.target, r.id);
-          };
-      } else {
-          itemToggle.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg> <span style="color:var(--warn)">Disable</span>';
-          itemToggle.onclick = (e) => {
-              e.stopPropagation();
-              dropdown.classList.remove('show');
-              submitRuleAction('remove_rule', e.target, r.id);
-          };
+    const row = document.createElement('div');
+    row.className = 'rule-row';
+    row.style.cssText = `position:relative; z-index:1; display:grid; grid-template-columns: 80px 1fr 140px; gap:8px; padding:10px 12px; border-bottom:1px solid #222; align-items:center; background: ${r.disabled ? 'rgba(255,255,255,0.02)' : (r.hit ? 'rgba(255,255,255,0.04)' : 'transparent')};`;
+
+    const idCol = document.createElement('div');
+    idCol.style.cssText = `font-family:monospace; font-size:12px; color: ${r.disabled ? 'var(--muted)' : (r.hit ? 'var(--warn)' : 'var(--text)')}; font-weight:700; ${r.disabled ? 'opacity:0.6;' : ''}`;
+    idCol.innerHTML = `${r.id} ${r.disabled ? '<span style="font-size:10px; color:var(--muted); font-weight:normal;">(Off)</span>' : (r.hit ? '<span title="Triggered in events" style="color:var(--warn)">🔥</span>' : '')}`;
+
+    const descCol = document.createElement('div');
+    descCol.style.cssText = `font-size:12px; color:${r.disabled ? 'var(--muted)' : 'var(--text)'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${r.disabled ? 'text-decoration:line-through; opacity:0.6;' : ''}`;
+    descCol.title = r.msg;
+    descCol.textContent = r.msg;
+
+    const actCol = document.createElement('div');
+    actCol.style.cssText = 'text-align:right; display:flex; gap:6px; justify-content:flex-end; align-items:center;';
+
+    const menuWrap = document.createElement('div');
+    menuWrap.className = 'rule-menu-wrap';
+
+    const dotsBtn = document.createElement('button');
+    dotsBtn.className = 'rule-dots-btn';
+    dotsBtn.innerHTML = '&#8942;';
+    dotsBtn.title = 'Rule Actions';
+    dotsBtn.onclick = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const isShown = dropdown.classList.contains('show');
+      document.querySelectorAll('.rule-menu-dropdown').forEach(d => {
+        d.classList.remove('show');
+        const parentRow = d.closest('.rule-row');
+        if (parentRow) parentRow.style.zIndex = '1';
+      });
+      if (!isShown) {
+        dropdown.classList.add('show');
+        row.style.zIndex = '100';
       }
-      
-      // 3. Delete
-      const itemDelete = document.createElement('button');
-      itemDelete.className = 'rule-menu-item danger';
-      itemDelete.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete';
-      itemDelete.onclick = (e) => {
-          e.stopPropagation();
-          dropdown.classList.remove('show');
-          submitRuleAction('delete_rule', e.target, r.id);
+    };
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'rule-menu-dropdown';
+
+    // 1. Edit
+    const itemEdit = document.createElement('button');
+    itemEdit.className = 'rule-menu-item';
+    itemEdit.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit';
+    itemEdit.onclick = (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('show');
+      openEditRuleModal(r.id);
+    };
+
+    // 2. Disable / Restore
+    const itemToggle = document.createElement('button');
+    itemToggle.className = 'rule-menu-item';
+    if (r.disabled) {
+      itemToggle.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> <span style="color:var(--ok)">Restore</span>';
+      itemToggle.onclick = (e) => {
+        e.stopPropagation();
+        dropdown.classList.remove('show');
+        submitRuleAction('restore_rule', e.target, r.id);
       };
-      
-      dropdown.appendChild(itemEdit);
-      dropdown.appendChild(itemToggle);
-      dropdown.appendChild(itemDelete);
-      
-      menuWrap.appendChild(dotsBtn);
-      menuWrap.appendChild(dropdown);
-      
-      actCol.appendChild(menuWrap);
-      
-      row.appendChild(idCol);
-      row.appendChild(descCol);
-      row.appendChild(actCol);
-      listEl.appendChild(row);
+    } else {
+      itemToggle.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg> <span style="color:var(--warn)">Disable</span>';
+      itemToggle.onclick = (e) => {
+        e.stopPropagation();
+        dropdown.classList.remove('show');
+        submitRuleAction('remove_rule', e.target, r.id);
+      };
+    }
+
+    // 3. Delete
+    const itemDelete = document.createElement('button');
+    itemDelete.className = 'rule-menu-item danger';
+    itemDelete.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete';
+    itemDelete.onclick = (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('show');
+      submitRuleAction('delete_rule', e.target, r.id);
+    };
+
+    dropdown.appendChild(itemEdit);
+    dropdown.appendChild(itemToggle);
+    dropdown.appendChild(itemDelete);
+
+    menuWrap.appendChild(dotsBtn);
+    menuWrap.appendChild(dropdown);
+
+    actCol.appendChild(menuWrap);
+
+    row.appendChild(idCol);
+    row.appendChild(descCol);
+    row.appendChild(actCol);
+    listEl.appendChild(row);
   });
 };
 
-window.openEditRuleModal = function(ruleId) {
+window.openEditRuleModal = function (ruleId) {
   const rule = allCrsRules.find(r => r.id == ruleId);
   if (!rule) return showToast('Rule not found', 'error');
-  
+
   document.getElementById('editRuleId').value = rule.id;
   document.getElementById('editRuleRaw').value = rule.raw;
   document.getElementById('editRuleModal').classList.add('open');
 };
 
-window.submitRuleAction = function(action, btnElement, targetId) {
+window.submitRuleAction = function (action, btnElement, targetId) {
   const payload = { action: action };
-  
-  if (action === 'add_custom_rule') {
-      const rawText = document.getElementById('addRuleRaw').value.trim();
-      if (!rawText) return showToast('Rule code cannot be empty', 'error');
-      
-      const idMatch = rawText.match(/id\s*:\s*'?(\d+)'?/);
-      if (idMatch) {
-          const newId = idMatch[1];
-          if (allCrsRules.some(r => r.id == newId)) {
-              return showToast(`Error: Rule ID ${newId} already exists!`, 'error');
-          }
-      } else {
-          return showToast('Warning: Could not detect a valid id: in your rule.', 'error');
-      }
 
-      if (!confirm(`Are you sure you want to add this custom rule?\nThis will validate the syntax and reload Nginx.`)) return;
-      payload.raw_text = rawText;
+  if (action === 'add_custom_rule') {
+    const rawText = document.getElementById('addRuleRaw').value.trim();
+    if (!rawText) return showToast('Rule code cannot be empty', 'error');
+
+    const idMatch = rawText.match(/id\s*:\s*'?(\d+)'?/);
+    if (idMatch) {
+      const newId = idMatch[1];
+      if (allCrsRules.some(r => r.id == newId)) {
+        return showToast(`Error: Rule ID ${newId} already exists!`, 'error');
+      }
+    } else {
+      return showToast('Warning: Could not detect a valid id: in your rule.', 'error');
+    }
+
+    if (!confirm(`Are you sure you want to add this custom rule?\nThis will validate the syntax and reload Nginx.`)) return;
+    payload.raw_text = rawText;
   }
   else if (action === 'edit_rule') {
-      const ruleId = document.getElementById('editRuleId').value;
-      const rawText = document.getElementById('editRuleRaw').value.trim();
-      if (!ruleId || !rawText) return showToast('Rule ID and raw text required', 'error');
-      if (!confirm(`Are you sure you want to edit rule ${ruleId}?\nThis will validate syntax and reload Nginx.`)) return;
-      payload.rule_id = ruleId;
-      payload.raw_text = rawText;
+    const ruleId = document.getElementById('editRuleId').value;
+    const rawText = document.getElementById('editRuleRaw').value.trim();
+    if (!ruleId || !rawText) return showToast('Rule ID and raw text required', 'error');
+    if (!confirm(`Are you sure you want to edit rule ${ruleId}?\nThis will validate syntax and reload Nginx.`)) return;
+    payload.rule_id = ruleId;
+    payload.raw_text = rawText;
   }
   else if (action === 'remove_rule') {
-      const id = targetId;
-      if(!id) return showToast('Rule ID required', 'error');
-      if(!confirm(`Are you sure you want to disable rule ${id}?`)) return;
-      payload.rule_id = id;
+    const id = targetId;
+    if (!id) return showToast('Rule ID required', 'error');
+    if (!confirm(`Are you sure you want to disable rule ${id}?`)) return;
+    payload.rule_id = id;
   }
   else if (action === 'restore_rule') {
-      const id = targetId;
-      if(!id) return showToast('Rule ID required', 'error');
-      if(!confirm(`Are you sure you want to restore rule ${id}?`)) return;
-      payload.rule_id = id;
+    const id = targetId;
+    if (!id) return showToast('Rule ID required', 'error');
+    if (!confirm(`Are you sure you want to restore rule ${id}?`)) return;
+    payload.rule_id = id;
   }
   else if (action === 'delete_rule') {
-      const id = targetId;
-      if(!id) return showToast('Rule ID required', 'error');
-      if(!confirm(`Are you sure you want to PERMANENTLY delete rule ${id}?\nThis action cannot be undone.`)) return;
-      payload.rule_id = id;
+    const id = targetId;
+    if (!id) return showToast('Rule ID required', 'error');
+    if (!confirm(`Are you sure you want to PERMANENTLY delete rule ${id}?\nThis action cannot be undone.`)) return;
+    payload.rule_id = id;
   }
   else if (action === 'update_crs') {
-      if(!confirm('This will pull the latest ModSecurity Core Rule Set from upstream and reload Nginx. Continue?')) return;
+    if (!confirm('This will pull the latest ModSecurity Core Rule Set from upstream and reload Nginx. Continue?')) return;
   }
-  
+
   const ogText = btnElement ? btnElement.textContent : '';
   if (btnElement) {
-      btnElement.textContent = '...';
-      btnElement.disabled = true;
+    btnElement.textContent = '...';
+    btnElement.disabled = true;
   }
-  
+
   document.getElementById('ruleTerminalWrapper').style.display = 'block';
   const term = document.getElementById('ruleTerminalOutput');
   term.textContent += `\n> ${action} ${payload.rule_id ? payload.rule_id : (payload.raw_text ? '...' : '')}\n`;
   term.scrollTop = term.scrollHeight;
 
   fetch('/api', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
   }).then(r => r.json()).then(data => {
-      if(data.output) term.textContent += data.output + '\n';
-      
-      if(data.success) {
-          showToast(data.message || 'Operation successful');
-          if (action === 'add_custom_rule') {
-              document.getElementById('addRuleRaw').value = '';
-          }
-          if (action === 'edit_rule') {
-              document.getElementById('editRuleModal').classList.remove('open');
-          }
-          if (action === 'add_custom_rule' || action === 'update_crs' || action === 'remove_rule' || action === 'restore_rule' || action === 'edit_rule' || action === 'delete_rule') {
-              loadRuleExplorer();
-          }
-      } else {
-          showToast(data.error || 'Operation failed', 'error');
-          if(data.details) term.textContent += '\nDETAILS:\n' + data.details + '\n';
+    if (data.output) term.textContent += data.output + '\n';
+
+    if (data.success) {
+      showToast(data.message || 'Operation successful');
+      if (action === 'add_custom_rule') {
+        document.getElementById('addRuleRaw').value = '';
       }
+      if (action === 'edit_rule') {
+        document.getElementById('editRuleModal').classList.remove('open');
+      }
+      if (action === 'add_custom_rule' || action === 'update_crs' || action === 'remove_rule' || action === 'restore_rule' || action === 'edit_rule' || action === 'delete_rule') {
+        loadRuleExplorer();
+      }
+    } else {
+      showToast(data.error || 'Operation failed', 'error');
+      if (data.details) term.textContent += '\nDETAILS:\n' + data.details + '\n';
+    }
   }).catch(err => {
-      showToast('Network error', 'error');
+    showToast('Network error', 'error');
   }).finally(() => {
-      if (btnElement) {
-          btnElement.textContent = ogText;
-          btnElement.disabled = false;
-      }
+    if (btnElement) {
+      btnElement.textContent = ogText;
+      btnElement.disabled = false;
+    }
   });
 };
 
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.rule-menu-wrap')) {
-        document.querySelectorAll('.rule-menu-dropdown').forEach(d => {
-            d.classList.remove('show');
-            const parentRow = d.closest('.rule-row');
-            if (parentRow) parentRow.style.zIndex = '1';
-        });
-    }
+  if (!e.target.closest('.rule-menu-wrap')) {
+    document.querySelectorAll('.rule-menu-dropdown').forEach(d => {
+      d.classList.remove('show');
+      const parentRow = d.closest('.rule-row');
+      if (parentRow) parentRow.style.zIndex = '1';
+    });
+  }
 });

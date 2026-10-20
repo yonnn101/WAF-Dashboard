@@ -66,15 +66,23 @@ def get_all_rules():
 def safe_reload(filepath):
     import subprocess
     import shutil
-    # Run nginx -t
-    res = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
+    # Detect web server (nginx vs apache2)
+    if shutil.which("nginx"):
+        res = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
+        reload_cmd = ["systemctl", "reload", "nginx"]
+    elif shutil.which("apache2ctl"):
+        res = subprocess.run(["apache2ctl", "configtest"], capture_output=True, text=True)
+        reload_cmd = ["systemctl", "reload", "apache2"]
+    else:
+        return True, ""
+
     if res.returncode != 0:
         # Rollback
         if os.path.exists(filepath + ".bak"):
             shutil.move(filepath + ".bak", filepath)
-        return False, res.stderr
+        return False, res.stderr or res.stdout
     # Success
-    subprocess.run(["systemctl", "reload", "nginx"], check=False)
+    subprocess.run(reload_cmd, check=False)
     if os.path.exists(filepath + ".bak"):
         os.remove(filepath + ".bak")
     return True, ""

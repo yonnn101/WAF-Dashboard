@@ -39,23 +39,34 @@ git checkout --quiet "$LATEST_TAG"
 
 # test config on whichever web server(s) are using this CRS
 CONFIG_OK=true
-NGINX_MSG=""
+TEST_MSG=""
+RELOAD_CMD=""
 if command -v nginx >/dev/null; then
-    if ! NGINX_MSG=$(nginx -t 2>&1); then
+    if ! TEST_MSG=$(nginx -t 2>&1); then
         CONFIG_OK=false
+    else
+        RELOAD_CMD="systemctl reload nginx"
+    fi
+elif command -v apache2ctl >/dev/null; then
+    if ! TEST_MSG=$(apache2ctl configtest 2>&1); then
+        CONFIG_OK=false
+    else
+        RELOAD_CMD="systemctl reload apache2"
     fi
 fi
 
 if [[ "$CONFIG_OK" == false ]]; then
     git checkout --quiet "$CURRENT_REF"
     echo "ROLLED_BACK: $LATEST_TAG failed config test, reverted to $CURRENT_TAG"
-    echo "$NGINX_MSG"
-    log "FAILED update to $LATEST_TAG, rolled back to $CURRENT_TAG. nginx -t output: $NGINX_MSG"
+    echo "$TEST_MSG"
+    log "FAILED update to $LATEST_TAG, rolled back to $CURRENT_TAG. output: $TEST_MSG"
     exit 1
 fi
 
-systemctl reload nginx
+if [[ -n "$RELOAD_CMD" ]]; then
+    $RELOAD_CMD
+fi
 
 echo "UPDATED: $CURRENT_TAG -> $LATEST_TAG"
-log "SUCCESS updated $CURRENT_TAG -> $LATEST_TAG, reloaded nginx"
+log "SUCCESS updated $CURRENT_TAG -> $LATEST_TAG"
 exit 0

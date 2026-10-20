@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAF Test Lab — ModSecurity & Apache</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #121826;
+            --bg-card: #182234;
+            --border: #23334d;
+            --text-primary: #f0f4fc;
+            --text-muted: #8b9bb4;
+            --accent-cyan: #00d2ff;
+            --accent-red: #ff4757;
+            --accent-green: #2ed573;
+            --accent-orange: #ffa502;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1080px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(0, 210, 255, 0.1);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 999px;
+            padding: 5px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .nav-links {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 210, 255, 0.15);
+            border-color: var(--accent-cyan);
+            color: #ffffff;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .attack-type {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .type-sqli { background: rgba(255, 71, 87, 0.2); color: #ff6b81; }
+        .type-xss { background: rgba(255, 165, 2, 0.2); color: #ffa502; }
+        .type-lfi { background: rgba(165, 94, 234, 0.2); color: #a55eea; }
+        .type-rce { background: rgba(235, 59, 90, 0.2); color: #eb3b5a; }
+        .type-scanner { background: rgba(45, 152, 218, 0.2); color: #2d98da; }
+        .type-normal { background: rgba(46, 213, 115, 0.2); color: #2ed573; }
+
+        .card-desc {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .code-preview {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #38bdf8;
+            margin-bottom: 16px;
+            word-break: break-all;
+        }
+
+        .btn-launch {
+            width: 100%;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-launch:hover {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            border-color: #38bdf8;
+        }
+
+        .btn-legit:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            border-color: #34d399;
+        }
+
+        /* Results console */
+        .console-container {
+            background: #06090e;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-top: 10px;
+        }
+
+        .console-header {
+            background: #111827;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .console-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .console-body {
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            min-height: 160px;
+            max-height: 340px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed rgba(255,255,255,0.08);
+        }
+
+        .status-blocked {
+            color: var(--accent-red);
+            font-weight: 700;
+        }
+
+        .status-allowed {
+            color: var(--accent-green);
+            font-weight: 700;
+        }
+
+        .custom-test-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .custom-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .custom-input {
+            flex: 1;
+            background: #080c14;
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .custom-submit {
+            background: var(--accent-cyan);
+            color: #000;
+            border: none;
+            font-weight: 700;
+            padding: 10px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .custom-submit:hover {
+            background: #38bdf8;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">🛡️ OWASP ModSecurity Active</span>
+            <h1>Apache WAF Attack Simulation Lab</h1>
+            <p class="subtitle">Fire simulated cyberattacks to verify real-time ModSecurity detection & Supabase event logging.</p>
+            <div class="nav-links">
+                <a href="http://localhost:5000" target="_blank" class="nav-btn">📊 Open WAF Dashboard (:5000)</a>
+            </div>
+        </header>
+
+        <!-- Custom payload tester -->
+        <div class="custom-test-card">
+            <h3 style="font-size: 16px;">🧪 Custom Attack Payload Tester</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Enter any parameter or payload to test whether ModSecurity blocks it:</p>
+            <form class="custom-form" onsubmit="event.preventDefault(); runCustomTest();">
+                <input type="text" id="customPayload" class="custom-input" placeholder="e.g. ?search=' UNION SELECT 1,2,3-- or /etc/passwd" value="?query=' OR '1'='1">
+                <button type="submit" class="custom-submit">Send Test</button>
+            </form>
+        </div>
+
+        <!-- Predefined attack cards -->
+        <div class="grid">
+            <!-- 1. SQL Injection -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-title">SQL Injection (SQLi)</span>
+                        <span class="attack-type type-sqli">Rule 942100</span>
+                    </div>
+                    <p class="card-desc">Tests boolean SQL injection injection targeting database authentication logic.</p>
+                    <div class="code-preview">/?id=1' OR '1'='1</div>
+                </div>
+                <button class="btn-launch" onclick="sendAttack('/?id=1%27%20OR%20%271%27=%271', 'SQL Injection')">🚀 Test SQL Injection</button>
+            </div>
+
+            <!-- 2. Path Traversal / LFI -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-title">Path Traversal (LFI)</span>
+                        <span class="attack-type type-lfi">Rule 930100</span>
+                    </div>
+                    <p class="card-desc">Attempts to escape the web document root to access sensitive OS system files.</p>
+                    <div class="code-preview">/?file=../../../../etc/passwd</div>
+                </div>
+                <button class="btn-launch" onclick="sendAttack('/?file=../../../../etc/passwd', 'Path Traversal / LFI')">🚀 Test Path Traversal</button>
+            </div>
+
+            <!-- 3. Cross-Site Scripting (XSS) -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-title">Cross-Site Scripting (XSS)</span>
+                        <span class="attack-type type-xss">Rule 941100</span>
+                    </div>
+                    <p class="card-desc">Transmits standard HTML script tag payload attempting reflected XSS.</p>
+                    <div class="code-preview">/?q=&lt;script&gt;alert(document.cookie)&lt;/script&gt;</div>
+                </div>
+                <button class="btn-launch" onclick="sendAttack('/?q=%3Cscript%3Ealert(document.cookie)%3C/script%3E', 'Cross-Site Scripting (XSS)')">🚀 Test XSS</button>
+            </div>
+
+            <!-- 4. OS Command Injection (RCE) -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-title">Remote Code Execution</span>
+                        <span class="attack-type type-rce">Rule 932100</span>
+                    </div>
+                    <p class="card-desc">Injects shell metacharacters attempting arbitrary system command execution.</p>
+                    <div class="code-preview">/?cmd=;cat /etc/shadow|id</div>
+                </div>
+                <button class="btn-launch" onclick="sendAttack('/?cmd=;cat%20/etc/shadow|id', 'Remote Command Injection (RCE)')">🚀 Test Command Injection</button>
+            </div>
+
+            <!-- 5. Vulnerability Scanner Probe -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-title">Malicious Scanner User-Agent</span>
+                        <span class="attack-type type-scanner">Rule 913100</span>
+                    </div>
+                    <p class="card-desc">Simulates an automated vulnerability scanner probe using the Nikto user-agent.</p>
+                    <div class="code-preview">User-Agent: Mozilla/5.0 (Nikto/2.1.6)</div>
+                </div>
+                <button class="btn-launch" onclick="sendCustomHeaderAttack('/', 'User-Agent', 'Nikto/2.1.6', 'Scanner Detection (Nikto)')">🚀 Test Scanner Detection</button>
+            </div>
+
+            <!-- 6. Legitimate Traffic -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-title">Legitimate Web Request</span>
+                        <span class="attack-type type-normal">Expected: 200 OK</span>
+                    </div>
+                    <p class="card-desc">Normal benign traffic to confirm that regular users are never blocked.</p>
+                    <div class="code-preview">/?search=laptops&category=tech</div>
+                </div>
+                <button class="btn-launch btn-legit" onclick="sendAttack('/?search=laptops&category=tech', 'Legitimate Request')">✅ Test Normal Request</button>
+            </div>
+        </div>
+
+        <!-- Real-time Console Log -->
+        <div class="console-container">
+            <div class="console-header">
+                <div class="console-title">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                    <span style="margin-left: 6px;">Live Traffic & WAF Response Console</span>
+                </div>
+                <button onclick="clearConsole()" style="background:none; border:1px solid #374151; color:#9ca3af; padding:3px 10px; border-radius:4px; font-size:11px; cursor:pointer;">Clear</button>
+            </div>
+            <div id="consoleBody" class="console-body">
+                <div style="color: #6b7280;">Waiting for test requests... Click any test button above to send a payload.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const consoleBody = document.getElementById('consoleBody');
+        let hasLogs = false;
+
+        function logToConsole(title, url, status, isBlocked) {
+            if (!hasLogs) {
+                consoleBody.innerHTML = '';
+                hasLogs = true;
+            }
+
+            const timestamp = new Date().toLocaleTimeString();
+            const statusHtml = isBlocked 
+                ? `<span class="status-blocked">⛔ 403 FORBIDDEN — BLOCKED BY MODSECURITY</span>`
+                : (status === 200 ? `<span class="status-allowed">✅ 200 OK — ALLOWED BY WAF</span>` : `<span style="color:#f59e0b;">STATUS: ${status}</span>`);
+
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `
+                <div><strong>[${timestamp}] ${title}</strong></div>
+                <div style="color: #94a3b8; font-size:12px; margin-top:2px;">URL: <code>${url}</code></div>
+                <div style="margin-top:4px;">Result: ${statusHtml}</div>
+                ${isBlocked ? '<div style="color:#00d2ff; font-size:11px; margin-top:3px;">→ Shipped to Supabase `modsec_events` table & visible in WAF Dashboard!</div>' : ''}
+            `;
+            consoleBody.prepend(div);
+        }
+
+        async function sendAttack(path, title) {
+            try {
+                const response = await fetch(path, { method: 'GET', cache: 'no-store' });
+                const isBlocked = (response.status === 403);
+                logToConsole(title, path, response.status, isBlocked);
+            } catch (err) {
+                logToConsole(title, path, 'Network Error', false);
+            }
+        }
+
+        async function sendCustomHeaderAttack(path, headerName, headerValue, title) {
+            try {
+                // Browsers restrict setting standard User-Agent via fetch, so we send as custom test or query
+                const testUrl = `${path}?probe=${encodeURIComponent(headerValue)}`;
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: { 'X-Scanner': headerValue },
+                    cache: 'no-store'
+                });
+                const isBlocked = (response.status === 403);
+                logToConsole(title, `${testUrl} [Header: ${headerName}=${headerValue}]`, response.status, isBlocked);
+            } catch (err) {
+                logToConsole(title, path, 'Network Error', false);
+            }
+        }
+
+        function runCustomTest() {
+            const raw = document.getElementById('customPayload').value.trim();
+            if (!raw) return;
+            const path = raw.startsWith('/') ? raw : (raw.startsWith('?') ? `/${raw}` : `/?query=${encodeURIComponent(raw)}`);
+            sendAttack(path, 'Custom Test Payload');
+        }
+
+        function clearConsole() {
+            consoleBody.innerHTML = '<div style="color: #6b7280;">Console cleared. Click any test button above.</div>';
+            hasLogs = false;
+        }
+    </script>
+</body>
+</html>

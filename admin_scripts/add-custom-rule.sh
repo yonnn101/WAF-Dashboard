@@ -52,18 +52,29 @@ SecRule ARGS|ARGS_NAMES|REQUEST_URI|REQUEST_BODY|REQUEST_HEADERS "@contains ${KE
     "id:${NEW_ID},phase:2,t:lowercase,deny,status:403,log,msg:'Custom rule blocked keyword: ${KEYWORD}'"
 EOF
 
-if command -v nginx >/dev/null && ! NGINX_MSG=$(nginx -t 2>&1); then
-    mv "$RULES_FILE.bak" "$RULES_FILE"
-    echo "ROLLED_BACK: new rule for '$KEYWORD' broke config"
-    echo "$NGINX_MSG"
-    log "FAILED to add rule for '$KEYWORD' (id $NEW_ID), rolled back. nginx -t output: $NGINX_MSG"
-    exit 1
+if command -v nginx >/dev/null; then
+    if ! NGINX_MSG=$(nginx -t 2>&1); then
+        mv "$RULES_FILE.bak" "$RULES_FILE"
+        echo "ROLLED_BACK: new rule for '$KEYWORD' broke config"
+        echo "$NGINX_MSG"
+        log "FAILED to add rule for '$KEYWORD' (id $NEW_ID), rolled back. nginx -t output: $NGINX_MSG"
+        exit 1
+    fi
+    systemctl reload nginx
+elif command -v apache2ctl >/dev/null; then
+    if ! APACHE_MSG=$(apache2ctl configtest 2>&1); then
+        mv "$RULES_FILE.bak" "$RULES_FILE"
+        echo "ROLLED_BACK: new rule for '$KEYWORD' broke config"
+        echo "$APACHE_MSG"
+        log "FAILED to add rule for '$KEYWORD' (id $NEW_ID), rolled back. apache2ctl output: $APACHE_MSG"
+        exit 1
+    fi
+    systemctl reload apache2
 fi
 rm -f "$RULES_FILE.bak"
 chmod 644 "$RULES_FILE"
 
 echo $((NEW_ID + 1)) > "$COUNTER_FILE"
-systemctl reload nginx
 
 echo "ADDED: id=${NEW_ID} keyword=${KEYWORD}"
 log "SUCCESS added rule id=$NEW_ID for keyword '$KEYWORD'"

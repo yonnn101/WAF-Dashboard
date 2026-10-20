@@ -29,16 +29,26 @@ fi
 cp "$EXCLUSIONS_FILE" "$EXCLUSIONS_FILE.bak"
 echo "SecRuleRemoveById $RULE_ID" >> "$EXCLUSIONS_FILE"
 
-if command -v nginx >/dev/null && ! NGINX_MSG=$(nginx -t 2>&1); then
-    mv "$EXCLUSIONS_FILE.bak" "$EXCLUSIONS_FILE"
-    echo "ROLLED_BACK: adding exclusion for $RULE_ID broke config"
-    echo "$NGINX_MSG"
-    log "FAILED to exclude $RULE_ID, rolled back. nginx -t output: $NGINX_MSG"
-    exit 1
+if command -v nginx >/dev/null; then
+    if ! NGINX_MSG=$(nginx -t 2>&1); then
+        mv "$EXCLUSIONS_FILE.bak" "$EXCLUSIONS_FILE"
+        echo "ROLLED_BACK: adding exclusion for $RULE_ID broke config"
+        echo "$NGINX_MSG"
+        log "FAILED to exclude $RULE_ID, rolled back. nginx -t output: $NGINX_MSG"
+        exit 1
+    fi
+    systemctl reload nginx
+elif command -v apache2ctl >/dev/null; then
+    if ! APACHE_MSG=$(apache2ctl configtest 2>&1); then
+        mv "$EXCLUSIONS_FILE.bak" "$EXCLUSIONS_FILE"
+        echo "ROLLED_BACK: adding exclusion for $RULE_ID broke config"
+        echo "$APACHE_MSG"
+        log "FAILED to exclude $RULE_ID, rolled back. apache2ctl output: $APACHE_MSG"
+        exit 1
+    fi
+    systemctl reload apache2
 fi
 rm -f "$EXCLUSIONS_FILE.bak"
-
-systemctl reload nginx
 
 echo "EXCLUDED: $RULE_ID"
 log "SUCCESS excluded rule $RULE_ID"

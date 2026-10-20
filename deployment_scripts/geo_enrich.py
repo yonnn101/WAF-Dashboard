@@ -17,7 +17,12 @@ from geoip2.database import Reader
 from geoip2.errors import AddressNotFoundError
 
 # ---- load env ----
-ENV_PATH = "/etc/log-shipper/nginx.env"
+ENV_CANDIDATES = [
+    os.getenv("LOG_SHIPPER_ENV"),
+    "/etc/log-shipper/apache.env",
+    "/etc/log-shipper/nginx.env",
+]
+ENV_PATH = next((p for p in ENV_CANDIDATES if p and os.path.exists(p)), "/etc/log-shipper/apache.env")
 load_dotenv(ENV_PATH)
 
 # ---- config ----

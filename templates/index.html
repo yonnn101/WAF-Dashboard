@@ -38,8 +38,8 @@
         </svg>
       </div>
       <div>
-        <div class="brand-text">WAF Console</div>
-        <div class="brand-sub">Production Environment</div>
+        <div class="brand-text">WAF SOC Console</div>
+        <div class="brand-sub">Enterprise Defense Matrix</div>
       </div>
     </div>
     <nav class="sidebar-nav" id="sidebarNav">
@@ -137,9 +137,9 @@
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
           </svg>
-          Combined Threat Report
+          WAF Security Operations Center
         </h1>
-        <p id="lastUpdate">Waiting for data...</p>
+        <p id="lastUpdate">Real-time Layer 7 Inspection &amp; Threat Intelligence Matrix</p>
       </div>
       <div class="header-actions">
         <div class="status-pill" id="healthPill">
@@ -311,29 +311,35 @@
       <!-- Stats Grid -->
       <div class="stat-grid" id="statGrid">
         <div class="stat-card">
-          <div class="stat-label">Total Events</div>
+          <div class="stat-label">Total Inspected</div>
           <div class="stat-value" id="stTotal">--</div>
+          <div class="stat-sub">Layer 7 HTTP requests</div>
         </div>
         <div class="stat-card blocked">
-          <div class="stat-label">Blocked</div>
+          <div class="stat-label">Mitigated Threats</div>
           <div class="stat-value" id="stBlocked">--</div>
+          <div class="stat-sub">HTTP 403 Forbidden</div>
         </div>
         <div class="stat-card passed">
-          <div class="stat-label">Passed</div>
+          <div class="stat-label">Legitimate Traffic</div>
           <div class="stat-value" id="stPassed">--</div>
+          <div class="stat-sub">HTTP 200 / Clean Pass</div>
         </div>
         <div class="stat-card rate">
-          <div class="stat-label">Block Rate</div>
+          <div class="stat-label">Enforcement Rate</div>
           <div class="stat-value" id="stRate">--</div>
           <div class="stat-sub" id="stRateSub"></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Nginx Events</div>
-          <div class="stat-value" id="stNginx" style="color:var(--ok)">--</div>
+        <div class="stat-card engine">
+          <div class="stat-label">Monitored Engine</div>
+          <div class="stat-value" style="font-size: 1.4em; color: var(--text-strong);">Apache 2.4</div>
+          <div class="stat-sub"><span class="engine-status-dot"></span>mod_security2 Active &bull; <span
+              id="stApache">0</span> ev</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Apache Events</div>
-          <div class="stat-value" id="stApache" style="color:var(--crit)">--</div>
+        <div class="stat-card crs">
+          <div class="stat-label">Active Ruleset</div>
+          <div class="stat-value" style="font-size: 1.4em; color: var(--accent);">OWASP CRS</div>
+          <div class="stat-sub">v3.3.8 Strict Enforcement</div>
         </div>
       </div>
 
@@ -633,7 +639,8 @@
         <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px;">
           <button class="btn" onclick="closeActionModal()">Close</button>
           <button class="btn" onclick="copyActionText()">Copy</button>
-          <button class="btn primary" id="actionModalApplyBtn" style="display:none;" onclick="applyActionLive()">Apply Live</button>
+          <button class="btn primary" id="actionModalApplyBtn" style="display:none;" onclick="applyActionLive()">Apply
+            Live</button>
           <button class="btn primary" id="actionModalResolveBtn">Mark as Resolved</button>
         </div>
       </div>
@@ -725,8 +732,9 @@
         <div id="ruleTerminalWrapper"
           style="margin-top:16px; border: 1px solid var(--warn); border-radius: 6px; overflow:hidden;">
           <div
-            style="background:var(--warn); color:#000; padding:6px 12px; font-size:0.8em; font-weight:bold; display:flex; align-items:center; gap:8px;">
-            ⚠️ CONSOLE: Actions reload Nginx and apply immediately.
+            style="background:var(--panel-2); color:var(--text-strong); border-bottom: 1px solid var(--border); padding:8px 12px; font-size:0.8em; font-weight:600; display:flex; align-items:center; gap:8px;">
+            <span class="engine-status-dot"></span> CONSOLE: Directives apply directly to Apache 2.4 and reload
+            mod_security2 dynamically.
           </div>
           <pre id="ruleTerminalOutput"
             style="background:#0a0a0a; color:#0f0; padding:12px; font-size:12px; overflow-x:auto; margin:0; min-height:100px; max-height:200px; overflow-y:auto; font-family:monospace;"></pre>

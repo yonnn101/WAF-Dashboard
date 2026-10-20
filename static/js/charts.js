@@ -12,7 +12,7 @@ function chartDefaults() {
     duration: 600,
     easing: 'easeOutQuart'
   };
-  
+
   // Explicitly configure high-contrast tooltips for all charts with formatted total counts and percentages
   Chart.defaults.plugins.tooltip.enabled = true;
   Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(20, 20, 23, 0.95)';
@@ -24,11 +24,11 @@ function chartDefaults() {
   Chart.defaults.plugins.tooltip.cornerRadius = 8;
   Chart.defaults.plugins.tooltip.displayColors = true;
   Chart.defaults.plugins.tooltip.callbacks = {
-    label: function(context) {
+    label: function (context) {
       const label = context.label || context.dataset.label || '';
       const rawVal = context.raw !== undefined ? context.raw : context.parsed;
       const valNum = typeof rawVal === 'number' ? rawVal : Number(rawVal || 0);
-      
+
       const chartType = context.chart.config.type;
       if (chartType === 'doughnut' || chartType === 'pie') {
         const dataset = context.dataset;
@@ -45,12 +45,12 @@ chartDefaults();
 function updateChartColors(isLight) {
   Chart.defaults.color = isLight ? '#71717a' : '#a1a1aa';
   Chart.defaults.borderColor = isLight ? '#e4e4e7' : '#27272a';
-  
+
   // Re-render all charts to pick up the new colors immediately
   Object.values(charts).forEach(chart => {
-      if (chart && typeof chart.update === 'function') {
-          chart.update('none');
-      }
+    if (chart && typeof chart.update === 'function') {
+      chart.update('none');
+    }
   });
 }
 
@@ -61,14 +61,14 @@ function renderStatusChart(blocked, passed) {
     charts.status.update('none');
     return;
   }
-  
+
   charts.status = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Blocked','Passed'],
+      labels: ['Blocked', 'Passed'],
       datasets: [{
         data: [blocked, passed],
-        backgroundColor: ['#dc2626','#16a34a'],
+        backgroundColor: ['#dc2626', '#16a34a'],
         borderWidth: 0,
         hoverOffset: 6
       }]
@@ -86,16 +86,16 @@ function renderStatusChart(blocked, passed) {
 
 function renderSevChart(sev) {
   const ctx = document.getElementById('sevChart');
-  const labels = ['Critical','Error','Warning','Notice','Other'];
-  const data   = [sev.CRITICAL||0, sev.ERROR||0, sev.WARNING||0, sev.NOTICE||0, sev.OTHER||0];
-  
+  const labels = ['Critical', 'Error', 'Warning', 'Notice', 'Other'];
+  const data = [sev.CRITICAL || 0, sev.ERROR || 0, sev.WARNING || 0, sev.NOTICE || 0, sev.OTHER || 0];
+
   if (charts.sev) {
     charts.sev.data.datasets[0].data = data;
     charts.sev.update('none');
     return;
   }
 
-  const colors = ['#dc2626','#d97706','#eab308','#3b82f6','#a1a1aa'];
+  const colors = ['#dc2626', '#d97706', '#eab308', '#3b82f6', '#a1a1aa'];
   charts.sev = new Chart(ctx, {
     type: 'pie',
     data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
@@ -111,8 +111,8 @@ function renderSevChart(sev) {
 
 function renderTrendChart(hourly) {
   const ctx = document.getElementById('trendChart');
-  const labels = Object.keys(hourly).map(h => h.replace('T',' '));
-  const data   = Object.values(hourly);
+  const labels = Object.keys(hourly).map(h => h.replace('T', ' '));
+  const data = Object.values(hourly);
 
   if (charts.trend) {
     charts.trend.data.labels = labels;
@@ -156,9 +156,9 @@ function renderTrendChart(hourly) {
 
 function renderRuleChart(rules) {
   const ctx = document.getElementById('ruleChart');
-  const labels = Object.keys(rules).map(k => k.length > 40 ? k.slice(0,40)+'...' : k);
+  const labels = Object.keys(rules).map(k => k.length > 40 ? k.slice(0, 40) + '...' : k);
   const data = Object.values(rules);
-  
+
   if (charts.rule) {
     charts.rule.data.labels = labels;
     charts.rule.data.datasets[0].data = data;
@@ -196,7 +196,7 @@ function renderIpChart(ips) {
   const ctx = document.getElementById('ipChart');
   const labels = Object.keys(ips);
   const data = Object.values(ips);
-  
+
   if (charts.ip) {
     charts.ip.data.labels = labels;
     charts.ip.data.datasets[0].data = data;
@@ -231,7 +231,7 @@ function renderIpChart(ips) {
 
 function renderUrlChart(urls) {
   const ctx = document.getElementById('urlChart');
-  const labels = Object.keys(urls).map(u => u.length > 35 ? u.slice(0,35)+'...' : u);
+  const labels = Object.keys(urls).map(u => u.length > 35 ? u.slice(0, 35) + '...' : u);
   const data = Object.values(urls);
 
   if (charts.url) {
@@ -270,11 +270,11 @@ function renderUrlChart(urls) {
 function renderStatusDistChart(statuses) {
   const ctx = document.getElementById('statusDistChart');
   const labels = Object.keys(statuses);
-  const data   = Object.values(statuses);
+  const data = Object.values(statuses);
   const colors = labels.map(s =>
-    s[0]==='2' ? '#16a34a' :
-    s[0]==='3' ? '#d97706' :
-    s[0]==='4' ? '#f97316' : '#dc2626'
+    s[0] === '2' ? '#16a34a' :
+      s[0] === '3' ? '#d97706' :
+        s[0] === '4' ? '#f97316' : '#dc2626'
   );
 
   if (charts.statusDist) {
@@ -313,7 +313,7 @@ function renderStatusDistChart(statuses) {
 function renderBotClassChart(botCounts) {
   const ctx = document.getElementById('botClassChart');
   if (!ctx) return;
-  
+
   const labels = Object.keys(botCounts);
   const data = Object.values(botCounts);
   const colors = labels.map(l => {
@@ -348,13 +348,13 @@ function renderBotClassChart(botCounts) {
 function renderThreatSparkline(hourlyThreatData, color) {
   const ctx = document.getElementById('threatSparkline');
   if (!ctx) return;
-  
+
   const labels = Object.keys(hourlyThreatData || {});
   const data = Object.values(hourlyThreatData || {});
 
   const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 80);
-  gradient.addColorStop(0, color + '80'); 
-  gradient.addColorStop(1, color + '00'); 
+  gradient.addColorStop(0, color + '80');
+  gradient.addColorStop(1, color + '00');
 
   if (charts.threatSparkline) {
     charts.threatSparkline.data.labels = labels;
@@ -388,16 +388,16 @@ function renderThreatSparkline(hourlyThreatData, color) {
         tooltip: {
           displayColors: false,
           callbacks: {
-            label: function(context) { return 'Threat Index: ' + context.raw; }
+            label: function (context) { return 'Threat Index: ' + context.raw; }
           }
         }
       },
       scales: {
         x: { display: false },
-        y: { 
+        y: {
           display: false,
           min: 0,
-          max: 100 
+          max: 100
         }
       },
       interaction: {
