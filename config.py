@@ -1,7 +1,7 @@
 # WAF Security Console -- Configuration
 
 # Supabase credentials
-SUPABASE_URL = 'https://lrvjjbyjynfpgiruqmcp.supabase.co'
+SUPABASE_URL = 'https://test.supabase.co'
 SUPABASE_ANON_KEY = 'test_anon_email'
 
 # Auth settings
